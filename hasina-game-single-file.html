@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b12">
+<title>Do You Know Hasina?</title>
+<style>
+:root {
+  --bg: #0b0b12;
+  --surface: #16161f;
+  --surface-2: #1f1f2b;
+  --line: #2e2e3d;
+  --text: #f4f4f7;
+  --muted: #9a9aae;
+  --accent: #f5c451;
+  --correct: #2fbf6b;
+  --wrong: #e5484d;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+#app { max-width: 620px; margin: 0 auto; padding: 20px 18px 40px; }
+
+/* Wider than a phone: give the scoreboard table room for every column. */
+@media (min-width: 621px) {
+  #app { max-width: 760px; }
+}
+
+.screen { display: flex; flex-direction: column; min-height: 92vh; }
+.screen[hidden] { display: none; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 44px; margin-bottom: 20px;
+}
+
+.brand {
+  font-size: 30px; line-height: 1.1; font-weight: 800;
+  letter-spacing: -0.02em; margin: 8px 0 0;
+}
+.brand span { color: var(--accent); }
+
+.screen-title { font-size: 20px; font-weight: 700; margin: 0; }
+
+.btn-back {
+  background: none; border: 0; color: var(--muted);
+  font-size: 16px; font-weight: 600; padding: 8px 4px; cursor: pointer;
+}
+.btn-back:active { color: var(--text); }
+
+.round-tag {
+  font-size: 14px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent);
+}
+
+.penalty-chip {
+  margin-left: auto; font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 6px 10px; border-radius: 999px;
+  background: var(--surface-2); color: var(--muted);
+}
+
+/* ---------- layout ---------- */
+.stack { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+.stack-center { justify-content: center; text-align: center; }
+
+.lede { color: var(--muted); font-size: 16px; margin: 0; }
+.kicker {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted); margin: 0;
+}
+
+.progress {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px 20px;
+  font-size: 17px; line-height: 1.5;
+}
+.progress strong { color: var(--accent); font-size: 22px; }
+.progress .warn { color: var(--wrong); font-weight: 600; }
+
+/* ---------- buttons ---------- */
+.btn {
+  font: inherit; font-weight: 700; border-radius: var(--radius);
+  border: 1px solid transparent; padding: 18px 20px;
+  cursor: pointer; text-align: center; width: 100%;
+}
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-huge { font-size: 22px; padding: 24px 20px; }
+
+.btn-primary { background: var(--accent); color: #1a1405; }
+.btn-ghost { background: var(--surface); color: var(--text); border-color: var(--line); }
+.btn-quiet { background: none; color: var(--muted); font-weight: 600; font-size: 15px; padding: 12px; }
+.btn-correct { background: var(--correct); color: #04220f; }
+.btn-wrong { background: var(--wrong); color: #2b0406; }
+
+.btn-reveal-answer small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-top: 4px; }
+
+.verdict-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: auto; }
+
+/* ---------- penalty picker ---------- */
+.choice-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.choice {
+  font: inherit; font-size: 20px; font-weight: 800;
+  padding: 26px 12px; border-radius: var(--radius);
+  background: var(--surface); color: var(--text);
+  border: 2px solid var(--line); cursor: pointer;
+}
+.choice.is-active { background: var(--accent); color: #1a1405; border-color: var(--accent); }
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field-label {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+}
+.field input {
+  font: inherit; font-size: 18px; padding: 18px 16px;
+  border-radius: var(--radius); border: 1px solid var(--line);
+  background: var(--surface); color: var(--text);
+}
+.field input::placeholder { color: #5c5c72; }
+.field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+#btn-reveal { margin-top: auto; }
+
+/* ---------- question ---------- */
+.question-text {
+  font-size: clamp(30px, 8vw, 46px); font-weight: 800;
+  line-height: 1.15; letter-spacing: -0.02em; margin: 4px 0 8px;
+}
+
+.reveal {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 14px;
+}
+.bride-answer { padding: 6px 4px; }
+.bride-answer p { font-size: 26px; font-weight: 700; margin: 6px 0 0; color: var(--accent); }
+
+/* ---------- penalty screen ---------- */
+.screen-penalty { justify-content: center; }
+.penalty-kicker {
+  font-size: 14px; font-weight: 800; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--wrong); margin: 0;
+}
+.penalty-text {
+  font-size: clamp(34px, 10vw, 60px); font-weight: 900;
+  line-height: 1.1; letter-spacing: -0.02em; margin: 12px 0 32px;
+}
+
+/* ---------- scoreboard ---------- */
+.tally { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tally-cell {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px; text-align: center;
+}
+.tally-num { display: block; font-size: 42px; font-weight: 900; line-height: 1; }
+.tally-correct .tally-num { color: var(--correct); }
+.tally-wrong .tally-num { color: var(--wrong); }
+.tally-label {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--muted);
+}
+
+.filter-row { display: flex; gap: 8px; }
+.filter {
+  font: inherit; font-size: 14px; font-weight: 700;
+  padding: 10px 16px; border-radius: 999px;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--line); cursor: pointer;
+}
+.filter.is-active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.table-wrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line); border-radius: var(--radius);
+}
+.results { border-collapse: collapse; width: 100%; font-size: 14px; }
+.results th, .results td {
+  text-align: left; padding: 12px;
+  border-bottom: 1px solid var(--line); vertical-align: top;
+}
+.results th {
+  font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); background: var(--surface-2); white-space: nowrap;
+}
+.results tbody tr:last-child td { border-bottom: 0; }
+.results .col-n { width: 1%; }
+.results .col-q { min-width: 150px; font-weight: 600; }
+.results .col-a { min-width: 110px; color: var(--accent); }
+.results .col-p { min-width: 160px; color: var(--muted); }
+.results .col-r { width: 1%; }
+.results .muted { color: #5c5c72; }
+
+.pill {
+  display: inline-block; font-size: 11px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 999px; white-space: nowrap;
+}
+.pill-correct { background: rgba(47, 191, 107, 0.16); color: var(--correct); }
+.pill-wrong { background: rgba(229, 72, 77, 0.16); color: var(--wrong); }
+.pill-type { background: var(--surface-2); color: var(--muted); margin-right: 6px; }
+
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+
+/* Phones: the table becomes stacked cards so nothing hides off-screen. */
+@media (max-width: 620px) {
+  .table-wrap { border: 0; overflow-x: visible; }
+  .results, .results tbody, .results tr, .results td { display: block; width: 100%; }
+  .results thead { display: none; }
+
+  .results tr {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px;
+  }
+
+  .results td {
+    border: 0; padding: 6px 0;
+    display: grid; grid-template-columns: 92px 1fr;
+    gap: 12px; align-items: baseline;
+  }
+  .results td::before {
+    content: attr(data-label);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .results td .cell-body { display: block; }
+  .results td.col-q { font-size: 17px; }
+  .results td.empty { display: block; }
+  .results td.empty::before { content: none; }
+}
+
+/* ---------- questions editor ---------- */
+#questions-list { display: flex; flex-direction: column; gap: 14px; }
+
+.q-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.q-card.is-played { opacity: 0.62; }
+
+.q-head { display: flex; align-items: center; gap: 10px; }
+.q-num {
+  font-size: 13px; font-weight: 800; letter-spacing: 0.06em; color: var(--muted);
+}
+.pill-played { background: var(--surface-2); color: var(--muted); }
+
+.q-delete {
+  margin-left: auto; font: inherit; font-size: 13px; font-weight: 700;
+  background: none; border: 0; color: var(--wrong);
+  padding: 6px 4px; cursor: pointer;
+}
+
+.q-field { gap: 6px; }
+.q-field .field-label { font-size: 10px; }
+.q-field input, .q-field textarea {
+  font: inherit; font-size: 16px; padding: 12px 14px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text);
+  width: 100%; resize: none; line-height: 1.4;
+}
+.q-field textarea { overflow: hidden; }
+.q-field input:focus, .q-field textarea:focus {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+
+#questions-summary { font-size: 14px; }
+
+</style>
+</head>
+<body>
+
+<main id="app">
+
+  <!-- HOME -->
+  <section class="screen" id="screen-home">
+    <header class="topbar">
+      <h1 class="brand">Do you know<br><span>Hasina?</span></h1>
+    </header>
+    <div class="stack">
+      <div class="progress" id="home-progress"></div>
+      <button class="btn btn-primary btn-huge" id="btn-next-question">Next Question</button>
+      <button class="btn btn-ghost" id="btn-home-scoreboard">Scoreboard</button>
+      <button class="btn btn-ghost" id="btn-home-questions">Questions &amp; Answers</button>
+      <button class="btn btn-quiet" id="btn-reset">Reset game</button>
+    </div>
+  </section>
+
+  <!-- SETUP: pick penalty before revealing question -->
+  <section class="screen" id="screen-setup" hidden>
+    <header class="topbar">
+      <button class="btn-back" data-goto="home">Back</button>
+      <span class="round-tag" id="setup-round"></span>
+    </header>
+    <div class="stack">
+      <p class="lede">Set the penalty <em>before</em> the question is revealed.</p>
+
+      <div class="choice-row" role="group" aria-label="Penalty type">
+        <button class="choice" id="choice-drink" data-type="drink">Drink</button>
+        <button class="choice" id="choice-dare" data-type="dare">Dare</button>
+      </div>
+
+      <label class="field">
+        <span class="field-label">What is the penalty?</span>
+        <input type="text" id="penalty-input" placeholder="e.g. 5 fingers of Corona"
+               autocomplete="off" autocapitalize="sentences" enterkeyhint="go">
+      </label>
+
+      <button class="btn btn-primary btn-huge" id="btn-reveal" disabled>Reveal Question</button>
+    </div>
+  </section>
+
+  <!-- QUESTION -->
+  <section class="screen" id="screen-question" hidden>
+    <header class="topbar">
+      <span class="round-tag" id="question-round"></span>
+      <span class="penalty-chip" id="question-penalty-chip"></span>
+    </header>
+    <div class="stack">
+      <p class="kicker" id="question-theme"></p>
+      <p class="question-text" id="question-text"></p>
+
+      <div class="reveal" id="bride-reveal">
+        <button class="btn btn-ghost btn-reveal-answer" id="btn-peek">
+          Show Hasina's answer <small>(host only)</small>
+        </button>
+        <div class="bride-answer" id="bride-answer" hidden>
+          <span class="kicker">Hasina said</span>
+          <p id="bride-answer-text"></p>
+        </div>
+      </div>
+
+      <div class="verdict-row">
+        <button class="btn btn-correct btn-huge" id="btn-correct">Correct</button>
+        <button class="btn btn-wrong btn-huge" id="btn-wrong">Wrong</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PENALTY -->
+  <section class="screen screen-penalty" id="screen-penalty" hidden>
+    <div class="stack stack-center">
+      <p class="penalty-kicker" id="penalty-kicker"></p>
+      <p class="penalty-text" id="penalty-text"></p>
+      <button class="btn btn-primary btn-huge" id="btn-penalty-done">Done</button>
+    </div>
+  </section>
+
+  <!-- QUESTIONS EDITOR -->
+  <section class="screen" id="screen-questions" hidden>
+    <header class="topbar">
+      <button class="btn-back" data-goto="home">Back</button>
+      <h2 class="screen-title">Questions &amp; Answers</h2>
+    </header>
+    <div class="stack">
+      <p class="lede" id="questions-summary"></p>
+      <button class="btn btn-primary" id="btn-add-question">Add question</button>
+      <div id="questions-list"></div>
+      <button class="btn btn-ghost" id="btn-download-questions">Download questions.json</button>
+      <button class="btn btn-quiet" id="btn-revert-questions">Discard edits, reload questions.json</button>
+    </div>
+  </section>
+
+  <!-- SCOREBOARD -->
+  <section class="screen" id="screen-scoreboard" hidden>
+    <header class="topbar">
+      <button class="btn-back" data-goto="home">Back</button>
+      <h2 class="screen-title">Scoreboard</h2>
+    </header>
+    <div class="stack">
+      <div class="tally">
+        <div class="tally-cell tally-correct">
+          <span class="tally-num" id="tally-correct">0</span>
+          <span class="tally-label">Correct</span>
+        </div>
+        <div class="tally-cell tally-wrong">
+          <span class="tally-num" id="tally-wrong">0</span>
+          <span class="tally-label">Wrong</span>
+        </div>
+      </div>
+
+      <div class="filter-row" role="group" aria-label="Filter results">
+        <button class="filter is-active" data-filter="all">All</button>
+        <button class="filter" data-filter="correct">Correct</button>
+        <button class="filter" data-filter="wrong">Wrong</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="results">
+          <thead>
+            <tr>
+              <th>#</th><th>Question</th><th>Hasina said</th><th>Penalty</th><th>Result</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+
+      <button class="btn btn-ghost" id="btn-download">Download results as JSON</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+window.EMBEDDED_QUESTIONS = [
+  {
+    "id": 1,
+    "theme": "Music",
+    "question": "Favourite artist?",
+    "brideAnswer": "Imagine dragons"
+  },
+  {
+    "id": 2,
+    "theme": "Music",
+    "question": "Favourite song",
+    "brideAnswer": "Dil se / strange clouds"
+  },
+  {
+    "id": 3,
+    "theme": "Movies",
+    "question": "Favourite movie",
+    "brideAnswer": "Currently: Taare zameen par"
+  },
+  {
+    "id": 4,
+    "theme": "Movies",
+    "question": "Sci-fi or romantic comedy",
+    "brideAnswer": "Romantic comedy"
+  },
+  {
+    "id": 5,
+    "theme": "Movies",
+    "question": "Marvel or DC?",
+    "brideAnswer": "Neither sorry 😂"
+  },
+  {
+    "id": 6,
+    "theme": "Movies",
+    "question": "Superman or Spiderman?",
+    "brideAnswer": "Spiderman"
+  },
+  {
+    "id": 7,
+    "theme": "Entertainment",
+    "question": "Theatre or opera?",
+    "brideAnswer": "Theatre"
+  },
+  {
+    "id": 8,
+    "theme": "Entertainment",
+    "question": "Gig or club?",
+    "brideAnswer": "Gig"
+  },
+  {
+    "id": 9,
+    "theme": "Friends",
+    "question": "Best friend",
+    "brideAnswer": "Vicky"
+  },
+  {
+    "id": 10,
+    "theme": "Friends",
+    "question": "Girls make better friends than boys, true or false",
+    "brideAnswer": "Nah depends on people"
+  },
+  {
+    "id": 11,
+    "theme": "Friends",
+    "question": "Worse enemy",
+    "brideAnswer": "😂 No one"
+  },
+  {
+    "id": 12,
+    "theme": "Family",
+    "question": "Hasina’s mother’s surname",
+    "brideAnswer": ""
+  },
+  {
+    "id": 13,
+    "theme": "Food and drink",
+    "question": "Favourite food",
+    "brideAnswer": "French fries / anything my mom makes"
+  },
+  {
+    "id": 14,
+    "theme": "Food and drink",
+    "question": "Least favourite food",
+    "brideAnswer": "Maksalaatikko"
+  },
+  {
+    "id": 15,
+    "theme": "Food and drink",
+    "question": "Most and least favourite spice",
+    "brideAnswer": ""
+  },
+  {
+    "id": 16,
+    "theme": "Food and drink",
+    "question": "Least favourite juice",
+    "brideAnswer": ""
+  },
+  {
+    "id": 17,
+    "theme": "Food and drink",
+    "question": "City market or Prisma",
+    "brideAnswer": "Who cares 😂"
+  },
+  {
+    "id": 18,
+    "theme": "Food and drink",
+    "question": "Ideal breakfast",
+    "brideAnswer": "Usually i skip it 😂 but if I have to choose: afghan style eggs with tomatoes"
+  },
+  {
+    "id": 19,
+    "theme": "Food and drink",
+    "question": "Coffee or tea?",
+    "brideAnswer": "Depends on the mood, mostly coffee. But if Areeb is making chai then always chai"
+  },
+  {
+    "id": 20,
+    "theme": "Travel",
+    "question": "Beach or mountains?",
+    "brideAnswer": "Mountains"
+  },
+  {
+    "id": 21,
+    "theme": "Travel",
+    "question": "Favourite bucket list holiday destination",
+    "brideAnswer": "Everywhere! Asia tour and south america tour 😂"
+  },
+  {
+    "id": 22,
+    "theme": "Travel",
+    "question": "Best place ever travelled to",
+    "brideAnswer": "Switzerland"
+  },
+  {
+    "id": 23,
+    "theme": "Travel",
+    "question": "Ski or surf",
+    "brideAnswer": "Neither pls"
+  },
+  {
+    "id": 24,
+    "theme": "Investments and money",
+    "question": "Believe in Bitcoin or a total con?",
+    "brideAnswer": "Total con"
+  },
+  {
+    "id": 25,
+    "theme": "Investments and money",
+    "question": "Save for tomorrow or spend for today?",
+    "brideAnswer": "Save"
+  },
+  {
+    "id": 26,
+    "theme": "Politics",
+    "question": "Trump or Anyone else?",
+    "brideAnswer": "Idc about americans, theyre all the same"
+  },
+  {
+    "id": 27,
+    "theme": "Sports",
+    "question": "Are you left or right handed?",
+    "brideAnswer": "Right handed"
+  },
+  {
+    "id": 28,
+    "theme": "Sports",
+    "question": "Cricket or football?",
+    "brideAnswer": "I have to say cricket 😂"
+  },
+  {
+    "id": 29,
+    "theme": "Sports",
+    "question": "Liverpool or Arsenal?",
+    "brideAnswer": "Liverpool"
+  },
+  {
+    "id": 30,
+    "theme": "Sports",
+    "question": "Liverpool or Man Utd?",
+    "brideAnswer": "Liverpool"
+  },
+  {
+    "id": 31,
+    "theme": "Sports",
+    "question": "Messi or Ronaldo?",
+    "brideAnswer": "Ronaldo"
+  },
+  {
+    "id": 32,
+    "theme": "Sports",
+    "question": "Winter Olympics or summer?",
+    "brideAnswer": "Summer"
+  },
+  {
+    "id": 33,
+    "theme": "General",
+    "question": "Favourite colour?",
+    "brideAnswer": "Green or yellow"
+  },
+  {
+    "id": 34,
+    "theme": "General",
+    "question": "Biggest pet peeve",
+    "brideAnswer": ""
+  },
+  {
+    "id": 35,
+    "theme": "Transport",
+    "question": "Plane or train?",
+    "brideAnswer": "Plane"
+  },
+  {
+    "id": 36,
+    "theme": "Transport",
+    "question": "Bus or taxi?",
+    "brideAnswer": "Taxi"
+  },
+  {
+    "id": 37,
+    "theme": "Transport",
+    "question": "Ferrari or Porsche?",
+    "brideAnswer": "Porsche"
+  },
+  {
+    "id": 38,
+    "theme": "Transport",
+    "question": "Electric or petrol?",
+    "brideAnswer": "Whatever Areeb drives 😂"
+  },
+  {
+    "id": 39,
+    "theme": "School",
+    "question": "What primary school did Hasina go to, and what method of transport did she take? (worth two penalties if wrong, two penalties to give to others if right)",
+    "brideAnswer": ""
+  }
+];
+
+/* Do You Know Hasina? — host-run bachelor party game. */
+
+const STATE_KEY = 'hasina-state-v2';
+const QUESTIONS_KEY = 'hasina-questions-v2';
+
+/*
+ * Rounds already played before the app existed. `questionId` points at the
+ * matching entry in questions.json; the question/answer text is snapshotted
+ * here too, so editing or deleting a question never rewrites history.
+ */
+const SEED_ROUNDS = [
+  {
+    round: 1,
+    questionId: 9,
+    question: 'Best friend',
+    brideAnswer: 'Vicky',
+    penaltyType: 'dare',
+    penaltyDescription: 'Strip shirt and walk out of the restaurant',
+    result: 'correct',
+    timestamp: null
+  },
+  {
+    round: 2,
+    questionId: 20,
+    question: 'Beach or mountains?',
+    brideAnswer: 'Mountains',
+    penaltyType: 'drink',
+    penaltyDescription: '4 fingers of Corona beer',
+    result: 'correct',
+    timestamp: null
+  },
+  {
+    round: 3,
+    questionId: 37,
+    question: 'Ferrari or Porsche?',
+    brideAnswer: 'Porsche',
+    penaltyType: 'drink',
+    penaltyDescription: '4 fingers of Corona beer',
+    result: 'wrong',
+    timestamp: null
+  },
+  {
+    round: 4,
+    questionId: 34,
+    question: 'Biggest pet peeve',
+    brideAnswer: '',
+    penaltyType: 'drink',
+    penaltyDescription: '5 fingers of Corona',
+    result: 'wrong',
+    timestamp: null
+  }
+];
+
+let questions = [];
+let fileQuestions = [];
+let questionsError = null;
+
+let state = freshState();
+let filter = 'all';
+
+function freshState() {
+  return {
+    rounds: SEED_ROUNDS.map((r) => ({ ...r })),
+    screen: 'home',
+    draft: null
+  };
+}
+
+/* ---------------- persistence ---------------- */
+
+function readStore(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (err) {
+    return null; /* Private mode — the game still runs from memory. */
+  }
+}
+
+function writeStore(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    /* Storage unavailable or full; in-memory state carries the round. */
+  }
+}
+
+function clearStore(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    /* nothing to do */
+  }
+}
+
+function saveState() {
+  writeStore(STATE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+  const raw = readStore(STATE_KEY);
+  if (!raw) return;
+  try {
+    const saved = JSON.parse(raw);
+    if (saved && Array.isArray(saved.rounds)) {
+      state = {
+        rounds: saved.rounds,
+        screen: saved.screen || 'home',
+        draft: saved.draft || null
+      };
+    }
+  } catch (err) {
+    /* Corrupt payload — start fresh rather than crash mid-party. */
+  }
+}
+
+function saveQuestions() {
+  writeStore(QUESTIONS_KEY, JSON.stringify(questions));
+}
+
+/* ---------------- helpers ---------------- */
+
+const $ = (id) => document.getElementById(id);
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined && text !== null) node.textContent = text;
+  return node;
+}
+
+function playedIds() {
+  return new Set(state.rounds.map((r) => r.questionId).filter((id) => id != null));
+}
+
+function unplayedQuestions() {
+  const played = playedIds();
+  return questions.filter((q) => !played.has(q.id));
+}
+
+function nextQuestion() {
+  return unplayedQuestions()[0] || null;
+}
+
+function nextRoundNumber() {
+  return state.rounds.length + 1;
+}
+
+function nextQuestionId() {
+  return questions.reduce((max, q) => Math.max(max, q.id), 0) + 1;
+}
+
+function downloadJson(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------------- screens ---------------- */
+
+const SCREENS = ['home', 'setup', 'question', 'penalty', 'questions', 'scoreboard'];
+
+function show(screen) {
+  state.screen = screen;
+  SCREENS.forEach((name) => {
+    $('screen-' + name).hidden = name !== screen;
+  });
+  window.scrollTo(0, 0);
+  saveState();
+}
+
+function renderHome() {
+  const played = state.rounds.length;
+  const left = unplayedQuestions().length;
+  const box = $('home-progress');
+  box.innerHTML = '';
+
+  box.appendChild(el('div', null, `Rounds played: ${played}`));
+
+  if (questionsError) {
+    box.appendChild(el('div', 'warn', questionsError));
+  } else if (questions.length === 0) {
+    box.appendChild(el('div', 'warn', 'No questions yet — add them under Questions & Answers.'));
+  } else {
+    const line = el('div');
+    line.appendChild(el('strong', null, String(left)));
+    line.appendChild(document.createTextNode(left === 1 ? ' question left' : ' questions left'));
+    box.appendChild(line);
+  }
+
+  const noneLeft = left === 0;
+  $('btn-next-question').disabled = noneLeft;
+  $('btn-next-question').textContent = noneLeft ? 'No questions left' : 'Next Question';
+}
+
+function renderSetup() {
+  $('setup-round').textContent = 'Round ' + nextRoundNumber();
+  $('choice-drink').classList.remove('is-active');
+  $('choice-dare').classList.remove('is-active');
+  $('penalty-input').value = '';
+  $('btn-reveal').disabled = true;
+}
+
+function renderQuestion() {
+  const d = state.draft;
+  $('question-round').textContent = 'Round ' + nextRoundNumber();
+  $('question-penalty-chip').textContent = d.penaltyType;
+  $('question-theme').textContent = d.theme || '';
+  $('question-text').textContent = d.question;
+  $('bride-answer-text').textContent = d.brideAnswer || 'Not recorded — ask the room';
+  $('bride-answer').hidden = true;
+  $('btn-peek').hidden = false;
+}
+
+function renderPenalty() {
+  const d = state.draft;
+  $('penalty-kicker').textContent = d.penaltyType === 'drink' ? 'Drink up' : 'Dare';
+  $('penalty-text').textContent = d.penaltyDescription;
+}
+
+function renderScoreboard() {
+  const correct = state.rounds.filter((r) => r.result === 'correct').length;
+  const wrong = state.rounds.filter((r) => r.result === 'wrong').length;
+  $('tally-correct').textContent = correct;
+  $('tally-wrong').textContent = wrong;
+
+  const body = $('results-body');
+  body.innerHTML = '';
+
+  const rows = state.rounds.filter((r) => filter === 'all' || r.result === filter);
+
+  if (rows.length === 0) {
+    const tr = el('tr');
+    const td = el('td', 'empty', 'Nothing to show yet.');
+    td.colSpan = 5;
+    tr.appendChild(td);
+    body.appendChild(tr);
+    return;
+  }
+
+  rows.forEach((r) => {
+    const tr = el('tr');
+
+    const num = el('td', 'col-n', String(r.round));
+    num.dataset.label = 'Round';
+    tr.appendChild(num);
+
+    const question = el('td', 'col-q', r.question);
+    question.dataset.label = 'Question';
+    tr.appendChild(question);
+
+    const answer = el('td', 'col-a');
+    answer.dataset.label = 'Hasina said';
+    if (r.brideAnswer) {
+      answer.textContent = r.brideAnswer;
+    } else {
+      answer.className = 'col-a muted';
+      answer.textContent = 'not recorded';
+    }
+    tr.appendChild(answer);
+
+    const penalty = el('td', 'col-p');
+    penalty.dataset.label = 'Penalty';
+    const penaltyBody = el('span', 'cell-body');
+    penaltyBody.appendChild(el('span', 'pill pill-type', r.penaltyType));
+    penaltyBody.appendChild(document.createTextNode(r.penaltyDescription));
+    penalty.appendChild(penaltyBody);
+    tr.appendChild(penalty);
+
+    const res = el('td', 'col-r');
+    res.dataset.label = 'Result';
+    const resBody = el('span', 'cell-body');
+    resBody.appendChild(el('span', 'pill pill-' + r.result, r.result));
+    res.appendChild(resBody);
+    tr.appendChild(res);
+
+    body.appendChild(tr);
+  });
+}
+
+/* ---------------- questions editor ---------------- */
+
+function renderQuestions() {
+  const played = playedIds();
+  const left = unplayedQuestions().length;
+  $('questions-summary').textContent =
+    `${questions.length} total · ${left} still to play · edits save automatically`;
+
+  const list = $('questions-list');
+  list.innerHTML = '';
+
+  if (questions.length === 0) {
+    list.appendChild(el('p', 'empty', 'No questions yet. Tap "Add question" to write the first one.'));
+    return;
+  }
+
+  questions.forEach((q) => {
+    const card = el('div', 'q-card');
+    if (played.has(q.id)) card.classList.add('is-played');
+
+    const head = el('div', 'q-head');
+    head.appendChild(el('span', 'q-num', '#' + q.id));
+    if (played.has(q.id)) head.appendChild(el('span', 'pill pill-played', 'played'));
+    const del = el('button', 'q-delete', 'Delete');
+    del.type = 'button';
+    del.addEventListener('click', () => deleteQuestion(q.id));
+    head.appendChild(del);
+    card.appendChild(head);
+
+    card.appendChild(makeField('Theme', 'input', q.theme || '', (v) => {
+      q.theme = v;
+      saveQuestions();
+    }));
+
+    card.appendChild(makeField('Question', 'textarea', q.question || '', (v) => {
+      q.question = v;
+      saveQuestions();
+    }));
+
+    card.appendChild(makeField("Hasina's answer", 'textarea', q.brideAnswer || '', (v) => {
+      q.brideAnswer = v;
+      saveQuestions();
+    }));
+
+    list.appendChild(card);
+  });
+}
+
+function makeField(label, kind, value, onInput) {
+  const wrap = el('label', 'field q-field');
+  wrap.appendChild(el('span', 'field-label', label));
+
+  const input = document.createElement(kind);
+  if (kind === 'input') input.type = 'text';
+  if (kind === 'textarea') input.rows = 2;
+  input.value = value;
+  input.addEventListener('input', () => {
+    onInput(input.value);
+    autoGrow(input);
+  });
+  wrap.appendChild(input);
+
+  if (kind === 'textarea') requestAnimationFrame(() => autoGrow(input));
+  return wrap;
+}
+
+function autoGrow(input) {
+  if (input.tagName !== 'TEXTAREA') return;
+  input.style.height = 'auto';
+  input.style.height = input.scrollHeight + 'px';
+}
+
+function addQuestion() {
+  questions.push({ id: nextQuestionId(), theme: '', question: '', brideAnswer: '' });
+  saveQuestions();
+  renderQuestions();
+  const cards = document.querySelectorAll('.q-card');
+  const last = cards[cards.length - 1];
+  if (last) {
+    last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const questionBox = last.querySelectorAll('textarea')[0];
+    if (questionBox) questionBox.focus();
+  }
+}
+
+function deleteQuestion(id) {
+  const q = questions.find((item) => item.id === id);
+  const label = q && q.question ? `"${q.question}"` : 'this question';
+  if (!window.confirm(`Delete ${label}? Rounds already played keep their record.`)) return;
+  questions = questions.filter((item) => item.id !== id);
+  saveQuestions();
+  renderQuestions();
+}
+
+function revertQuestions() {
+  if (!window.confirm('Discard your edits and reload questions.json from the repo?')) return;
+  questions = fileQuestions.map((q) => ({ ...q }));
+  clearStore(QUESTIONS_KEY);
+  renderQuestions();
+}
+
+/* ---------------- game flow ---------------- */
+
+function startRound() {
+  if (!nextQuestion()) return;
+  renderSetup();
+  show('setup');
+}
+
+function pickPenaltyType(type) {
+  $('choice-drink').classList.toggle('is-active', type === 'drink');
+  $('choice-dare').classList.toggle('is-active', type === 'dare');
+  refreshRevealButton();
+}
+
+function selectedType() {
+  if ($('choice-drink').classList.contains('is-active')) return 'drink';
+  if ($('choice-dare').classList.contains('is-active')) return 'dare';
+  return null;
+}
+
+function refreshRevealButton() {
+  const ready = Boolean(selectedType()) && $('penalty-input').value.trim().length > 0;
+  $('btn-reveal').disabled = !ready;
+}
+
+function revealQuestion() {
+  const type = selectedType();
+  const description = $('penalty-input').value.trim();
+  const q = nextQuestion();
+  if (!type || !description || !q) return;
+
+  state.draft = {
+    questionId: q.id,
+    theme: q.theme,
+    question: q.question,
+    brideAnswer: q.brideAnswer,
+    penaltyType: type,
+    penaltyDescription: description
+  };
+  renderQuestion();
+  show('question');
+}
+
+function judge(result) {
+  const d = state.draft;
+  state.rounds.push({
+    round: nextRoundNumber(),
+    questionId: d.questionId,
+    question: d.question,
+    brideAnswer: d.brideAnswer,
+    penaltyType: d.penaltyType,
+    penaltyDescription: d.penaltyDescription,
+    result: result,
+    timestamp: new Date().toISOString()
+  });
+  saveState();
+
+  if (result === 'wrong') {
+    renderPenalty();
+    show('penalty');
+  } else {
+    finishRound();
+  }
+}
+
+function finishRound() {
+  state.draft = null;
+  if (!nextQuestion()) {
+    filter = 'all';
+    setActiveFilter();
+    renderScoreboard();
+    show('scoreboard');
+  } else {
+    renderHome();
+    show('home');
+  }
+}
+
+function resetGame() {
+  if (!window.confirm('Reset the game? Every logged round is wiped back to the four already played. Your questions are kept.')) return;
+  state = freshState();
+  saveState();
+  renderHome();
+  show('home');
+}
+
+/* ---------------- export ---------------- */
+
+function downloadResults() {
+  downloadJson('hasina-results.json', {
+    exportedAt: new Date().toISOString(),
+    totals: {
+      correct: state.rounds.filter((r) => r.result === 'correct').length,
+      wrong: state.rounds.filter((r) => r.result === 'wrong').length,
+      played: state.rounds.length
+    },
+    rounds: state.rounds
+  });
+}
+
+function downloadQuestions() {
+  downloadJson('questions.json', questions);
+}
+
+/* ---------------- filters ---------------- */
+
+function setActiveFilter() {
+  document.querySelectorAll('.filter').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.filter === filter);
+  });
+}
+
+/* ---------------- wiring ---------------- */
+
+function wire() {
+  $('btn-next-question').addEventListener('click', startRound);
+  $('btn-home-scoreboard').addEventListener('click', () => {
+    renderScoreboard();
+    show('scoreboard');
+  });
+  $('btn-home-questions').addEventListener('click', () => {
+    renderQuestions();
+    show('questions');
+  });
+  $('btn-reset').addEventListener('click', resetGame);
+
+  $('choice-drink').addEventListener('click', () => pickPenaltyType('drink'));
+  $('choice-dare').addEventListener('click', () => pickPenaltyType('dare'));
+  $('penalty-input').addEventListener('input', refreshRevealButton);
+  $('penalty-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !$('btn-reveal').disabled) revealQuestion();
+  });
+  $('btn-reveal').addEventListener('click', revealQuestion);
+
+  $('btn-peek').addEventListener('click', () => {
+    $('bride-answer').hidden = false;
+    $('btn-peek').hidden = true;
+  });
+  $('btn-correct').addEventListener('click', () => judge('correct'));
+  $('btn-wrong').addEventListener('click', () => judge('wrong'));
+  $('btn-penalty-done').addEventListener('click', finishRound);
+
+  $('btn-add-question').addEventListener('click', addQuestion);
+  $('btn-download-questions').addEventListener('click', downloadQuestions);
+  $('btn-revert-questions').addEventListener('click', revertQuestions);
+
+  document.querySelectorAll('[data-goto]').forEach((b) => {
+    b.addEventListener('click', () => {
+      state.draft = null;
+      renderHome();
+      show('home');
+    });
+  });
+
+  document.querySelectorAll('.filter').forEach((b) => {
+    b.addEventListener('click', () => {
+      filter = b.dataset.filter;
+      setActiveFilter();
+      renderScoreboard();
+    });
+  });
+
+  $('btn-download').addEventListener('click', downloadResults);
+}
+
+async function loadQuestions() {
+  /* The single-file build inlines the questions so it works offline, from file://. */
+  if (Array.isArray(window.EMBEDDED_QUESTIONS)) {
+    fileQuestions = window.EMBEDDED_QUESTIONS;
+  } else {
+    try {
+      const res = await fetch('questions.json', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('questions.json must be an array');
+      fileQuestions = data;
+    } catch (err) {
+      questionsError = 'Could not load questions.json (' + err.message + ').';
+    }
+  }
+
+  /* Edits made in the app win over the committed file. */
+  const raw = readStore(QUESTIONS_KEY);
+  if (raw) {
+    try {
+      const saved = JSON.parse(raw);
+      if (Array.isArray(saved)) {
+        questions = saved;
+        questionsError = null;
+        return;
+      }
+    } catch (err) {
+      /* fall through to the file copy */
+    }
+  }
+  questions = fileQuestions.map((q) => ({ ...q }));
+}
+
+async function init() {
+  loadState();
+  wire();
+  await loadQuestions();
+
+  if (state.draft && state.screen === 'question') {
+    renderQuestion();
+    show('question');
+  } else {
+    state.draft = null;
+    renderHome();
+    show('home');
+  }
+}
+
+init();
+
+</script>
+</body>
+</html>
