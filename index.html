@@ -17,15 +17,28 @@
       <h1 class="brand">Do you know<br><span>Hasina?</span></h1>
     </header>
     <div class="stack">
+      <div class="sync-line" id="sync-line"></div>
       <div class="progress" id="home-progress"></div>
+
+      <label class="toggle">
+        <span>
+          <span class="toggle-title">Random order</span>
+          <span class="toggle-sub">Shuffle instead of going one by one</span>
+        </span>
+        <input type="checkbox" id="toggle-shuffle">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+
       <button class="btn btn-primary btn-huge" id="btn-next-question">Next Question</button>
       <button class="btn btn-ghost" id="btn-home-scoreboard">Scoreboard</button>
+      <button class="btn btn-ghost" id="btn-home-admin">Backend &mdash; set results</button>
       <button class="btn btn-ghost" id="btn-home-questions">Questions &amp; Answers</button>
+      <button class="btn btn-quiet" id="btn-home-settings">Sync settings</button>
       <button class="btn btn-quiet" id="btn-reset">Reset game</button>
     </div>
   </section>
 
-  <!-- SETUP: pick penalty before revealing question -->
+  <!-- SETUP -->
   <section class="screen" id="screen-setup" hidden>
     <header class="topbar">
       <button class="btn-back" data-goto="home">Back</button>
@@ -33,18 +46,15 @@
     </header>
     <div class="stack">
       <p class="lede">Set the penalty <em>before</em> the question is revealed.</p>
-
       <div class="choice-row" role="group" aria-label="Penalty type">
         <button class="choice" id="choice-drink" data-type="drink">Drink</button>
         <button class="choice" id="choice-dare" data-type="dare">Dare</button>
       </div>
-
       <label class="field">
         <span class="field-label">What is the penalty?</span>
         <input type="text" id="penalty-input" placeholder="e.g. 5 fingers of Corona"
                autocomplete="off" autocapitalize="sentences" enterkeyhint="go">
       </label>
-
       <button class="btn btn-primary btn-huge" id="btn-reveal" disabled>Reveal Question</button>
     </div>
   </section>
@@ -58,8 +68,7 @@
     <div class="stack">
       <p class="kicker" id="question-theme"></p>
       <p class="question-text" id="question-text"></p>
-
-      <div class="reveal" id="bride-reveal">
+      <div class="reveal">
         <button class="btn btn-ghost btn-reveal-answer" id="btn-peek">
           Show Hasina's answer <small>(host only)</small>
         </button>
@@ -68,7 +77,6 @@
           <p id="bride-answer-text"></p>
         </div>
       </div>
-
       <div class="verdict-row">
         <button class="btn btn-correct btn-huge" id="btn-correct">Correct</button>
         <button class="btn btn-wrong btn-huge" id="btn-wrong">Wrong</button>
@@ -85,6 +93,23 @@
     </div>
   </section>
 
+  <!-- BACKEND / ADMIN -->
+  <section class="screen" id="screen-admin" hidden>
+    <header class="topbar">
+      <button class="btn-back" data-goto="home">Back</button>
+      <h2 class="screen-title">Backend</h2>
+    </header>
+    <div class="stack">
+      <p class="lede">Set any question correct or wrong by hand. The penalty is optional.</p>
+      <div class="filter-row" role="group" aria-label="Filter questions">
+        <button class="filter is-active" data-adminfilter="all">All</button>
+        <button class="filter" data-adminfilter="played">Played</button>
+        <button class="filter" data-adminfilter="unplayed">Unplayed</button>
+      </div>
+      <div id="admin-list"></div>
+    </div>
+  </section>
+
   <!-- QUESTIONS EDITOR -->
   <section class="screen" id="screen-questions" hidden>
     <header class="topbar">
@@ -97,6 +122,34 @@
       <div id="questions-list"></div>
       <button class="btn btn-ghost" id="btn-download-questions">Download questions.json</button>
       <button class="btn btn-quiet" id="btn-revert-questions">Discard edits, reload questions.json</button>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="screen" id="screen-settings" hidden>
+    <header class="topbar">
+      <button class="btn-back" data-goto="home">Back</button>
+      <h2 class="screen-title">Sync settings</h2>
+    </header>
+    <div class="stack">
+      <p class="lede">Saves results to GitHub through your Cloudflare Worker, so every
+        phone sees the same scoreboard. Leave blank to stay on this device only.</p>
+      <label class="field">
+        <span class="field-label">Worker URL</span>
+        <input type="url" id="worker-url" placeholder="https://areeb-bachelor-results.workers.dev"
+               autocomplete="off" autocapitalize="off" spellcheck="false">
+      </label>
+      <label class="field">
+        <span class="field-label">Party key (needed only to save)</span>
+        <input type="password" id="party-key" placeholder="the PARTY_KEY secret"
+               autocomplete="off" autocapitalize="off" spellcheck="false">
+      </label>
+      <button class="btn btn-primary" id="btn-test-sync">Test connection</button>
+      <div class="progress" id="settings-status">Not tested yet.</div>
+      <button class="btn btn-ghost" id="btn-pull-now">Load results from GitHub</button>
+      <button class="btn btn-ghost" id="btn-push-now">Save results to GitHub now</button>
+      <p class="lede small">Spectators can leave the party key blank &mdash; they will see the live
+        scoreboard but cannot change it.</p>
     </div>
   </section>
 
@@ -117,24 +170,19 @@
           <span class="tally-label">Wrong</span>
         </div>
       </div>
-
       <div class="filter-row" role="group" aria-label="Filter results">
         <button class="filter is-active" data-filter="all">All</button>
         <button class="filter" data-filter="correct">Correct</button>
         <button class="filter" data-filter="wrong">Wrong</button>
       </div>
-
       <div class="table-wrap">
         <table class="results">
           <thead>
-            <tr>
-              <th>#</th><th>Question</th><th>Hasina said</th><th>Penalty</th><th>Result</th>
-            </tr>
+            <tr><th>#</th><th>Question</th><th>Hasina said</th><th>Penalty</th><th>Result</th></tr>
           </thead>
           <tbody id="results-body"></tbody>
         </table>
       </div>
-
       <button class="btn btn-ghost" id="btn-download">Download results as JSON</button>
     </div>
   </section>

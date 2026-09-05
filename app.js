@@ -2,53 +2,16 @@
 
 const STATE_KEY = 'hasina-state-v2';
 const QUESTIONS_KEY = 'hasina-questions-v2';
+const SETTINGS_KEY = 'hasina-settings-v1';
+const POLL_MS = 8000;
 
-/*
- * Rounds already played before the app existed. `questionId` points at the
- * matching entry in questions.json; the question/answer text is snapshotted
- * here too, so editing or deleting a question never rewrites history.
- */
+/* Rounds played before the app existed. questionId points into questions.json;
+   the text is snapshotted so editing a question never rewrites history. */
 const SEED_ROUNDS = [
-  {
-    round: 1,
-    questionId: 9,
-    question: 'Best friend',
-    brideAnswer: 'Vicky',
-    penaltyType: 'dare',
-    penaltyDescription: 'Strip shirt and walk out of the restaurant',
-    result: 'correct',
-    timestamp: null
-  },
-  {
-    round: 2,
-    questionId: 20,
-    question: 'Beach or mountains?',
-    brideAnswer: 'Mountains',
-    penaltyType: 'drink',
-    penaltyDescription: '4 fingers of Corona beer',
-    result: 'correct',
-    timestamp: null
-  },
-  {
-    round: 3,
-    questionId: 37,
-    question: 'Ferrari or Porsche?',
-    brideAnswer: 'Porsche',
-    penaltyType: 'drink',
-    penaltyDescription: '4 fingers of Corona beer',
-    result: 'wrong',
-    timestamp: null
-  },
-  {
-    round: 4,
-    questionId: 34,
-    question: 'Biggest pet peeve',
-    brideAnswer: '',
-    penaltyType: 'drink',
-    penaltyDescription: '5 fingers of Corona',
-    result: 'wrong',
-    timestamp: null
-  }
+  { questionId: 9,  question: 'Best friend',        brideAnswer: 'Vicky',     penaltyType: 'dare',  penaltyDescription: 'Strip shirt and walk out of the restaurant', result: 'correct', timestamp: null },
+  { questionId: 20, question: 'Beach or mountains?', brideAnswer: 'Mountains', penaltyType: 'drink', penaltyDescription: '4 fingers of Corona beer', result: 'correct', timestamp: null },
+  { questionId: 37, question: 'Ferrari or Porsche?', brideAnswer: 'Porsche',   penaltyType: 'drink', penaltyDescription: '4 fingers of Corona beer', result: 'wrong',   timestamp: null },
+  { questionId: 34, question: 'Biggest pet peeve',   brideAnswer: '',          penaltyType: 'drink', penaltyDescription: '5 fingers of Corona',      result: 'wrong',   timestamp: null }
 ];
 
 let questions = [];
@@ -56,44 +19,50 @@ let fileQuestions = [];
 let questionsError = null;
 
 let state = freshState();
+let settings = { workerUrl: '', partyKey: '', shuffle: false };
+
 let filter = 'all';
+let adminFilter = 'all';
+let syncStatus = { mode: 'off', at: null, message: '' };
+let pollTimer = null;
 
 function freshState() {
   return {
-    rounds: SEED_ROUNDS.map((r) => ({ ...r })),
+    rounds: renumber(SEED_ROUNDS.map((r) => ({ ...r }))),
     screen: 'home',
-    draft: null
+    draft: null,
+    pendingQuestionId: null,
+    updatedAt: new Date(0).toISOString()
   };
 }
 
-/* ---------------- persistence ---------------- */
+/* Round numbers always follow array order, so deleting one never leaves a gap. */
+function renumber(rounds) {
+  rounds.forEach((r, i) => { r.round = i + 1; });
+  return rounds;
+}
+
+/* ---------------- storage ---------------- */
 
 function readStore(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch (err) {
-    return null; /* Private mode — the game still runs from memory. */
-  }
+  try { return localStorage.getItem(key); } catch (err) { return null; }
 }
-
 function writeStore(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch (err) {
-    /* Storage unavailable or full; in-memory state carries the round. */
-  }
+  try { localStorage.setItem(key, value); } catch (err) { /* private mode */ }
 }
-
 function clearStore(key) {
-  try {
-    localStorage.removeItem(key);
-  } catch (err) {
-    /* nothing to do */
-  }
+  try { localStorage.removeItem(key); } catch (err) { /* nothing to do */ }
 }
 
-function saveState() {
-  writeStore(STATE_KEY, JSON.stringify(state));
+function saveState() { writeStore(STATE_KEY, JSON.stringify(state)); }
+function saveQuestions() { writeStore(QUESTIONS_KEY, JSON.stringify(questions)); }
+function saveSettings() { writeStore(SETTINGS_KEY, JSON.stringify(settings)); }
+
+/* Every local change stamps a time, so the newest edit wins across devices. */
+function touch() {
+  state.updatedAt = new Date().toISOString();
+  saveState();
+  pushState();
 }
 
 function loadState() {
@@ -103,18 +72,113 @@ function loadState() {
     const saved = JSON.parse(raw);
     if (saved && Array.isArray(saved.rounds)) {
       state = {
-        rounds: saved.rounds,
+        rounds: renumber(saved.rounds),
         screen: saved.screen || 'home',
-        draft: saved.draft || null
+        draft: saved.draft || null,
+        pendingQuestionId: saved.pendingQuestionId || null,
+        updatedAt: saved.updatedAt || new Date(0).toISOString()
       };
     }
+  } catch (err) { /* corrupt — start fresh rather than crash mid-party */ }
+}
+
+function loadSettings() {
+  const raw = readStore(SETTINGS_KEY);
+  if (!raw) return;
+  try {
+    const saved = JSON.parse(raw);
+    if (saved && typeof saved === 'object') settings = { ...settings, ...saved };
+  } catch (err) { /* ignore */ }
+}
+
+/* ---------------- sync ---------------- */
+
+function syncConfigured() { return Boolean(settings.workerUrl); }
+function canWrite() { return Boolean(settings.workerUrl && settings.partyKey); }
+
+function endpoint() {
+  return settings.workerUrl.replace(/\/+$/, '') + '/results';
+}
+
+async function pullState(force) {
+  if (!syncConfigured()) return false;
+  try {
+    const res = await fetch(endpoint(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const remote = await res.json();
+    if (!remote || !Array.isArray(remote.rounds)) throw new Error('bad payload');
+
+    const newer = remote.updatedAt && remote.updatedAt > state.updatedAt;
+    if (force || newer) {
+      state.rounds = renumber(remote.rounds);
+      state.updatedAt = remote.updatedAt || new Date().toISOString();
+      saveState();
+      refreshCurrentScreen();
+    }
+    setSync('live', '');
+    return true;
   } catch (err) {
-    /* Corrupt payload — start fresh rather than crash mid-party. */
+    setSync('error', String(err.message || err));
+    return false;
   }
 }
 
-function saveQuestions() {
-  writeStore(QUESTIONS_KEY, JSON.stringify(questions));
+async function pushState() {
+  if (!canWrite()) return false;
+  try {
+    const res = await fetch(endpoint(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Party-Key': settings.partyKey },
+      body: JSON.stringify({ rounds: state.rounds })
+    });
+    if (!res.ok) throw new Error(res.status === 401 ? 'wrong party key' : 'HTTP ' + res.status);
+    const saved = await res.json();
+    if (saved && saved.updatedAt) { state.updatedAt = saved.updatedAt; saveState(); }
+    setSync('live', '');
+    return true;
+  } catch (err) {
+    setSync('error', String(err.message || err));
+    return false;
+  }
+}
+
+function setSync(mode, message) {
+  syncStatus = { mode: mode, at: new Date(), message: message };
+  renderSyncLine();
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  if (!syncConfigured()) return;
+  pollTimer = setInterval(() => {
+    /* Never yank the board out from under a round in progress. */
+    if (state.screen === 'home' || state.screen === 'scoreboard') pullState(false);
+  }, POLL_MS);
+}
+
+function renderSyncLine() {
+  const el = $('sync-line');
+  if (!el) return;
+  if (!syncConfigured()) {
+    el.className = 'sync-line sync-off';
+    el.textContent = 'This device only — results are not saved to GitHub.';
+    return;
+  }
+  if (syncStatus.mode === 'error') {
+    el.className = 'sync-line sync-bad';
+    el.textContent = 'Sync problem: ' + syncStatus.message;
+    return;
+  }
+  el.className = 'sync-line sync-ok';
+  const when = syncStatus.at ? timeAgo(syncStatus.at) : 'not yet';
+  el.textContent = (canWrite() ? 'Live · saving to GitHub · ' : 'Live · read only · ') + when;
+}
+
+function timeAgo(d) {
+  const s = Math.max(0, Math.round((Date.now() - d.getTime()) / 1000));
+  if (s < 5) return 'just now';
+  if (s < 60) return s + 's ago';
+  return Math.round(s / 60) + 'm ago';
 }
 
 /* ---------------- helpers ---------------- */
@@ -131,22 +195,35 @@ function el(tag, className, text) {
 function playedIds() {
   return new Set(state.rounds.map((r) => r.questionId).filter((id) => id != null));
 }
-
 function unplayedQuestions() {
   const played = playedIds();
   return questions.filter((q) => !played.has(q.id));
 }
-
-function nextQuestion() {
-  return unplayedQuestions()[0] || null;
+function roundFor(questionId) {
+  return state.rounds.find((r) => r.questionId === questionId) || null;
 }
-
-function nextRoundNumber() {
-  return state.rounds.length + 1;
+function questionById(id) {
+  return questions.find((q) => q.id === id) || null;
 }
-
+function nextRoundNumber() { return state.rounds.length + 1; }
 function nextQuestionId() {
   return questions.reduce((max, q) => Math.max(max, q.id), 0) + 1;
+}
+
+/* Chosen once per round and remembered — otherwise shuffle would pick a
+   different question on every call. */
+function chooseNextQuestion() {
+  const pool = unplayedQuestions();
+  if (!pool.length) return null;
+  if (settings.shuffle) return pool[Math.floor(Math.random() * pool.length)];
+  return pool[0];
+}
+
+function pendingQuestion() {
+  if (state.pendingQuestionId == null) return null;
+  const played = playedIds();
+  if (played.has(state.pendingQuestionId)) return null;
+  return questionById(state.pendingQuestionId);
 }
 
 function downloadJson(filename, payload) {
@@ -163,15 +240,19 @@ function downloadJson(filename, payload) {
 
 /* ---------------- screens ---------------- */
 
-const SCREENS = ['home', 'setup', 'question', 'penalty', 'questions', 'scoreboard'];
+const SCREENS = ['home', 'setup', 'question', 'penalty', 'admin', 'questions', 'settings', 'scoreboard'];
 
 function show(screen) {
   state.screen = screen;
-  SCREENS.forEach((name) => {
-    $('screen-' + name).hidden = name !== screen;
-  });
+  SCREENS.forEach((name) => { $('screen-' + name).hidden = name !== screen; });
   window.scrollTo(0, 0);
   saveState();
+}
+
+function refreshCurrentScreen() {
+  if (state.screen === 'home') renderHome();
+  else if (state.screen === 'scoreboard') renderScoreboard();
+  else if (state.screen === 'admin') renderAdmin();
 }
 
 function renderHome() {
@@ -179,12 +260,11 @@ function renderHome() {
   const left = unplayedQuestions().length;
   const box = $('home-progress');
   box.innerHTML = '';
-
   box.appendChild(el('div', null, `Rounds played: ${played}`));
 
   if (questionsError) {
     box.appendChild(el('div', 'warn', questionsError));
-  } else if (questions.length === 0) {
+  } else if (!questions.length) {
     box.appendChild(el('div', 'warn', 'No questions yet — add them under Questions & Answers.'));
   } else {
     const line = el('div');
@@ -193,9 +273,10 @@ function renderHome() {
     box.appendChild(line);
   }
 
-  const noneLeft = left === 0;
-  $('btn-next-question').disabled = noneLeft;
-  $('btn-next-question').textContent = noneLeft ? 'No questions left' : 'Next Question';
+  $('btn-next-question').disabled = left === 0;
+  $('btn-next-question').textContent = left === 0 ? 'No questions left' : 'Next Question';
+  $('toggle-shuffle').checked = Boolean(settings.shuffle);
+  renderSyncLine();
 }
 
 function renderSetup() {
@@ -209,7 +290,7 @@ function renderSetup() {
 function renderQuestion() {
   const d = state.draft;
   $('question-round').textContent = 'Round ' + nextRoundNumber();
-  $('question-penalty-chip').textContent = d.penaltyType;
+  $('question-penalty-chip').textContent = d.penaltyType || '';
   $('question-theme').textContent = d.theme || '';
   $('question-text').textContent = d.question;
   $('bride-answer-text').textContent = d.brideAnswer || 'Not recorded — ask the room';
@@ -231,10 +312,9 @@ function renderScoreboard() {
 
   const body = $('results-body');
   body.innerHTML = '';
-
   const rows = state.rounds.filter((r) => filter === 'all' || r.result === filter);
 
-  if (rows.length === 0) {
+  if (!rows.length) {
     const tr = el('tr');
     const td = el('td', 'empty', 'Nothing to show yet.');
     td.colSpan = 5;
@@ -245,56 +325,159 @@ function renderScoreboard() {
 
   rows.forEach((r) => {
     const tr = el('tr');
-
-    const num = el('td', 'col-n', String(r.round));
-    num.dataset.label = 'Round';
-    tr.appendChild(num);
-
-    const question = el('td', 'col-q', r.question);
-    question.dataset.label = 'Question';
-    tr.appendChild(question);
+    const num = el('td', 'col-n', String(r.round)); num.dataset.label = 'Round'; tr.appendChild(num);
+    const q = el('td', 'col-q', r.question); q.dataset.label = 'Question'; tr.appendChild(q);
 
     const answer = el('td', 'col-a');
     answer.dataset.label = 'Hasina said';
-    if (r.brideAnswer) {
-      answer.textContent = r.brideAnswer;
-    } else {
-      answer.className = 'col-a muted';
-      answer.textContent = 'not recorded';
-    }
+    if (r.brideAnswer) { answer.textContent = r.brideAnswer; }
+    else { answer.className = 'col-a muted'; answer.textContent = 'not recorded'; }
     tr.appendChild(answer);
 
     const penalty = el('td', 'col-p');
     penalty.dataset.label = 'Penalty';
-    const penaltyBody = el('span', 'cell-body');
-    penaltyBody.appendChild(el('span', 'pill pill-type', r.penaltyType));
-    penaltyBody.appendChild(document.createTextNode(r.penaltyDescription));
-    penalty.appendChild(penaltyBody);
+    const pb = el('span', 'cell-body');
+    if (r.penaltyType) {
+      pb.appendChild(el('span', 'pill pill-type', r.penaltyType));
+      pb.appendChild(document.createTextNode(r.penaltyDescription || ''));
+    } else {
+      pb.appendChild(el('span', 'muted', 'none'));
+    }
+    penalty.appendChild(pb);
     tr.appendChild(penalty);
 
     const res = el('td', 'col-r');
     res.dataset.label = 'Result';
-    const resBody = el('span', 'cell-body');
-    resBody.appendChild(el('span', 'pill pill-' + r.result, r.result));
-    res.appendChild(resBody);
+    const rb = el('span', 'cell-body');
+    rb.appendChild(el('span', 'pill pill-' + r.result, r.result));
+    res.appendChild(rb);
     tr.appendChild(res);
 
     body.appendChild(tr);
   });
 }
 
+/* ---------------- backend / admin ---------------- */
+
+function renderAdmin() {
+  const list = $('admin-list');
+  list.innerHTML = '';
+
+  const shown = questions.filter((q) => {
+    const r = roundFor(q.id);
+    if (adminFilter === 'played') return Boolean(r);
+    if (adminFilter === 'unplayed') return !r;
+    return true;
+  });
+
+  if (!shown.length) {
+    list.appendChild(el('p', 'empty', 'Nothing here.'));
+    return;
+  }
+
+  shown.forEach((q) => {
+    const r = roundFor(q.id);
+    const card = el('div', 'a-card');
+    if (r) card.classList.add('is-played');
+
+    const head = el('div', 'a-head');
+    head.appendChild(el('span', 'q-num', '#' + q.id));
+    if (q.theme) head.appendChild(el('span', 'pill pill-type', q.theme));
+    card.appendChild(head);
+
+    card.appendChild(el('p', 'a-question', q.question || '(no question text)'));
+    if (q.brideAnswer) card.appendChild(el('p', 'a-answer', q.brideAnswer));
+
+    card.appendChild(segmented('Result', [
+      { v: 'unplayed', label: 'Unplayed' },
+      { v: 'correct', label: 'Correct' },
+      { v: 'wrong', label: 'Wrong' }
+    ], r ? r.result : 'unplayed', (v) => setResult(q, v)));
+
+    if (r) {
+      card.appendChild(segmented('Penalty', [
+        { v: 'none', label: 'None' },
+        { v: 'drink', label: 'Drink' },
+        { v: 'dare', label: 'Dare' }
+      ], r.penaltyType || 'none', (v) => setPenaltyType(q.id, v)));
+
+      const wrap = el('label', 'field q-field');
+      wrap.appendChild(el('span', 'field-label', 'Penalty description'));
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = r.penaltyDescription || '';
+      input.placeholder = 'optional';
+      input.addEventListener('input', () => {
+        const live = roundFor(q.id);
+        if (live) { live.penaltyDescription = input.value; touch(); }
+      });
+      wrap.appendChild(input);
+      card.appendChild(wrap);
+    }
+
+    list.appendChild(card);
+  });
+}
+
+function segmented(label, options, current, onPick) {
+  const wrap = el('div', 'seg-wrap');
+  wrap.appendChild(el('span', 'field-label', label));
+  const row = el('div', 'seg');
+  options.forEach((o) => {
+    const b = el('button', 'seg-btn', o.label);
+    b.type = 'button';
+    if (o.v === current) b.classList.add('is-active');
+    b.addEventListener('click', () => onPick(o.v));
+    row.appendChild(b);
+  });
+  wrap.appendChild(row);
+  return wrap;
+}
+
+function setResult(question, value) {
+  const existing = roundFor(question.id);
+
+  if (value === 'unplayed') {
+    if (existing) state.rounds = state.rounds.filter((r) => r.questionId !== question.id);
+  } else if (existing) {
+    existing.result = value;
+  } else {
+    state.rounds.push({
+      questionId: question.id,
+      question: question.question,
+      brideAnswer: question.brideAnswer,
+      penaltyType: null,
+      penaltyDescription: '',
+      result: value,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  renumber(state.rounds);
+  touch();
+  renderAdmin();
+}
+
+function setPenaltyType(questionId, value) {
+  const r = roundFor(questionId);
+  if (!r) return;
+  r.penaltyType = value === 'none' ? null : value;
+  if (!r.penaltyType) r.penaltyDescription = '';
+  touch();
+  renderAdmin();
+}
+
 /* ---------------- questions editor ---------------- */
 
 function renderQuestions() {
   const played = playedIds();
-  const left = unplayedQuestions().length;
   $('questions-summary').textContent =
-    `${questions.length} total · ${left} still to play · edits save automatically`;
+    `${questions.length} total · ${unplayedQuestions().length} still to play · edits save automatically`;
 
   const list = $('questions-list');
   list.innerHTML = '';
 
-  if (questions.length === 0) {
+  if (!questions.length) {
     list.appendChild(el('p', 'empty', 'No questions yet. Tap "Add question" to write the first one.'));
     return;
   }
@@ -312,20 +495,9 @@ function renderQuestions() {
     head.appendChild(del);
     card.appendChild(head);
 
-    card.appendChild(makeField('Theme', 'input', q.theme || '', (v) => {
-      q.theme = v;
-      saveQuestions();
-    }));
-
-    card.appendChild(makeField('Question', 'textarea', q.question || '', (v) => {
-      q.question = v;
-      saveQuestions();
-    }));
-
-    card.appendChild(makeField("Hasina's answer", 'textarea', q.brideAnswer || '', (v) => {
-      q.brideAnswer = v;
-      saveQuestions();
-    }));
+    card.appendChild(makeField('Theme', 'input', q.theme || '', (v) => { q.theme = v; saveQuestions(); }));
+    card.appendChild(makeField('Question', 'textarea', q.question || '', (v) => { q.question = v; saveQuestions(); }));
+    card.appendChild(makeField("Hasina's answer", 'textarea', q.brideAnswer || '', (v) => { q.brideAnswer = v; saveQuestions(); }));
 
     list.appendChild(card);
   });
@@ -334,17 +506,12 @@ function renderQuestions() {
 function makeField(label, kind, value, onInput) {
   const wrap = el('label', 'field q-field');
   wrap.appendChild(el('span', 'field-label', label));
-
   const input = document.createElement(kind);
   if (kind === 'input') input.type = 'text';
   if (kind === 'textarea') input.rows = 2;
   input.value = value;
-  input.addEventListener('input', () => {
-    onInput(input.value);
-    autoGrow(input);
-  });
+  input.addEventListener('input', () => { onInput(input.value); autoGrow(input); });
   wrap.appendChild(input);
-
   if (kind === 'textarea') requestAnimationFrame(() => autoGrow(input));
   return wrap;
 }
@@ -363,8 +530,8 @@ function addQuestion() {
   const last = cards[cards.length - 1];
   if (last) {
     last.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const questionBox = last.querySelectorAll('textarea')[0];
-    if (questionBox) questionBox.focus();
+    const box = last.querySelectorAll('textarea')[0];
+    if (box) box.focus();
   }
 }
 
@@ -387,7 +554,10 @@ function revertQuestions() {
 /* ---------------- game flow ---------------- */
 
 function startRound() {
-  if (!nextQuestion()) return;
+  const q = chooseNextQuestion();
+  if (!q) return;
+  state.pendingQuestionId = q.id;
+  saveState();
   renderSetup();
   show('setup');
 }
@@ -412,9 +582,10 @@ function refreshRevealButton() {
 function revealQuestion() {
   const type = selectedType();
   const description = $('penalty-input').value.trim();
-  const q = nextQuestion();
+  const q = pendingQuestion() || chooseNextQuestion();
   if (!type || !description || !q) return;
 
+  state.pendingQuestionId = q.id;
   state.draft = {
     questionId: q.id,
     theme: q.theme,
@@ -430,7 +601,6 @@ function revealQuestion() {
 function judge(result) {
   const d = state.draft;
   state.rounds.push({
-    round: nextRoundNumber(),
     questionId: d.questionId,
     question: d.question,
     brideAnswer: d.brideAnswer,
@@ -439,19 +609,19 @@ function judge(result) {
     result: result,
     timestamp: new Date().toISOString()
   });
-  saveState();
+  renumber(state.rounds);
+  state.pendingQuestionId = null;
+  touch();
 
-  if (result === 'wrong') {
-    renderPenalty();
-    show('penalty');
-  } else {
-    finishRound();
-  }
+  if (result === 'wrong') { renderPenalty(); show('penalty'); }
+  else finishRound();
 }
 
 function finishRound() {
   state.draft = null;
-  if (!nextQuestion()) {
+  state.pendingQuestionId = null;
+  saveState();
+  if (!unplayedQuestions().length) {
     filter = 'all';
     setActiveFilter();
     renderScoreboard();
@@ -465,7 +635,7 @@ function finishRound() {
 function resetGame() {
   if (!window.confirm('Reset the game? Every logged round is wiped back to the four already played. Your questions are kept.')) return;
   state = freshState();
-  saveState();
+  touch();
   renderHome();
   show('home');
 }
@@ -484,16 +654,51 @@ function downloadResults() {
   });
 }
 
-function downloadQuestions() {
-  downloadJson('questions.json', questions);
-}
-
-/* ---------------- filters ---------------- */
-
 function setActiveFilter() {
-  document.querySelectorAll('.filter').forEach((b) => {
+  document.querySelectorAll('[data-filter]').forEach((b) => {
     b.classList.toggle('is-active', b.dataset.filter === filter);
   });
+}
+
+/* ---------------- settings screen ---------------- */
+
+function renderSettings() {
+  $('worker-url').value = settings.workerUrl || '';
+  $('party-key').value = settings.partyKey || '';
+  $('settings-status').textContent = syncConfigured()
+    ? (canWrite() ? 'Configured for saving.' : 'Configured read-only (no party key).')
+    : 'Not configured — this device only.';
+}
+
+function readSettingsForm() {
+  settings.workerUrl = $('worker-url').value.trim();
+  settings.partyKey = $('party-key').value.trim();
+  saveSettings();
+}
+
+async function testSync() {
+  readSettingsForm();
+  const box = $('settings-status');
+  if (!settings.workerUrl) { box.textContent = 'Enter the Worker URL first.'; return; }
+
+  box.textContent = 'Testing…';
+  try {
+    const res = await fetch(settings.workerUrl.replace(/\/+$/, '') + '/health', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const info = await res.json();
+    if (!info.configured) {
+      box.textContent = 'Worker is up but missing its GITHUB_TOKEN or PARTY_KEY secret.';
+      return;
+    }
+    const pulled = await pullState(false);
+    box.textContent = pulled
+      ? (canWrite() ? 'Connected. Results will save to GitHub.' : 'Connected, read only — add the party key to save.')
+      : 'Worker reachable but reading results failed.';
+  } catch (err) {
+    box.textContent = 'Could not reach the Worker: ' + (err.message || err);
+  }
+  startPolling();
+  renderSyncLine();
 }
 
 /* ---------------- wiring ---------------- */
@@ -501,14 +706,17 @@ function setActiveFilter() {
 function wire() {
   $('btn-next-question').addEventListener('click', startRound);
   $('btn-home-scoreboard').addEventListener('click', () => {
-    renderScoreboard();
-    show('scoreboard');
+    filter = 'all'; setActiveFilter(); renderScoreboard(); show('scoreboard');
   });
-  $('btn-home-questions').addEventListener('click', () => {
-    renderQuestions();
-    show('questions');
-  });
+  $('btn-home-admin').addEventListener('click', () => { renderAdmin(); show('admin'); });
+  $('btn-home-questions').addEventListener('click', () => { renderQuestions(); show('questions'); });
+  $('btn-home-settings').addEventListener('click', () => { renderSettings(); show('settings'); });
   $('btn-reset').addEventListener('click', resetGame);
+
+  $('toggle-shuffle').addEventListener('change', (e) => {
+    settings.shuffle = e.target.checked;
+    saveSettings();
+  });
 
   $('choice-drink').addEventListener('click', () => pickPenaltyType('drink'));
   $('choice-dare').addEventListener('click', () => pickPenaltyType('dare'));
@@ -527,22 +735,47 @@ function wire() {
   $('btn-penalty-done').addEventListener('click', finishRound);
 
   $('btn-add-question').addEventListener('click', addQuestion);
-  $('btn-download-questions').addEventListener('click', downloadQuestions);
+  $('btn-download-questions').addEventListener('click', () => downloadJson('questions.json', questions));
   $('btn-revert-questions').addEventListener('click', revertQuestions);
+
+  $('btn-test-sync').addEventListener('click', testSync);
+  $('btn-pull-now').addEventListener('click', async () => {
+    readSettingsForm();
+    $('settings-status').textContent = (await pullState(true))
+      ? 'Loaded from GitHub.' : 'Could not load: ' + syncStatus.message;
+  });
+  $('btn-push-now').addEventListener('click', async () => {
+    readSettingsForm();
+    if (!canWrite()) { $('settings-status').textContent = 'Add the party key to save.'; return; }
+    $('settings-status').textContent = (await pushState())
+      ? 'Saved to GitHub.' : 'Could not save: ' + syncStatus.message;
+  });
+  ['worker-url', 'party-key'].forEach((id) => {
+    $(id).addEventListener('change', () => { readSettingsForm(); startPolling(); });
+  });
 
   document.querySelectorAll('[data-goto]').forEach((b) => {
     b.addEventListener('click', () => {
       state.draft = null;
+      state.pendingQuestionId = null;
       renderHome();
       show('home');
     });
   });
 
-  document.querySelectorAll('.filter').forEach((b) => {
+  document.querySelectorAll('[data-filter]').forEach((b) => {
     b.addEventListener('click', () => {
-      filter = b.dataset.filter;
-      setActiveFilter();
-      renderScoreboard();
+      filter = b.dataset.filter; setActiveFilter(); renderScoreboard();
+    });
+  });
+
+  document.querySelectorAll('[data-adminfilter]').forEach((b) => {
+    b.addEventListener('click', () => {
+      adminFilter = b.dataset.adminfilter;
+      document.querySelectorAll('[data-adminfilter]').forEach((x) => {
+        x.classList.toggle('is-active', x.dataset.adminfilter === adminFilter);
+      });
+      renderAdmin();
     });
   });
 
@@ -550,7 +783,6 @@ function wire() {
 }
 
 async function loadQuestions() {
-  /* The single-file build inlines the questions so it works offline, from file://. */
   if (Array.isArray(window.EMBEDDED_QUESTIONS)) {
     fileQuestions = window.EMBEDDED_QUESTIONS;
   } else {
@@ -565,25 +797,19 @@ async function loadQuestions() {
     }
   }
 
-  /* Edits made in the app win over the committed file. */
   const raw = readStore(QUESTIONS_KEY);
   if (raw) {
     try {
       const saved = JSON.parse(raw);
-      if (Array.isArray(saved)) {
-        questions = saved;
-        questionsError = null;
-        return;
-      }
-    } catch (err) {
-      /* fall through to the file copy */
-    }
+      if (Array.isArray(saved)) { questions = saved; questionsError = null; return; }
+    } catch (err) { /* fall through to the file copy */ }
   }
   questions = fileQuestions.map((q) => ({ ...q }));
 }
 
 async function init() {
   loadState();
+  loadSettings();
   wire();
   await loadQuestions();
 
@@ -595,6 +821,9 @@ async function init() {
     renderHome();
     show('home');
   }
+
+  if (syncConfigured()) { await pullState(false); startPolling(); }
+  renderSyncLine();
 }
 
 init();

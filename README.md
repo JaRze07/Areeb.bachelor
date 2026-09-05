@@ -11,6 +11,9 @@ time — HTML/CSS/JS plus one JSON file, served straight from GitHub Pages.
 | `styles.css` | Dark, high-contrast, phone-first styling |
 | `app.js` | Game flow, state, `localStorage` persistence, JSON export |
 | `questions.json` | All 39 questions imported from the "Do you know Hasina?" doc |
+| `results.json` | Written by the Worker once sync is on — the live game record |
+| `worker/` | Cloudflare Worker that saves results to GitHub. See `worker/README.md` |
+| `debug.html` | Reads this browser's saved game when the scoreboard looks wrong |
 
 ## Game flow
 
@@ -25,6 +28,34 @@ time — HTML/CSS/JS plus one JSON file, served straight from GitHub Pages.
 
 Progress is written to `localStorage` after every step, so a mid-party refresh
 resumes exactly where you left off.
+
+## Saving to GitHub (live, multi-device)
+
+Off by default — the game runs fine on one phone with no setup. To turn it on,
+deploy the Worker (`worker/README.md`) and fill in **Sync settings** in the app.
+
+Once on: every round is committed to `results.json` in this repo, and any other
+phone pointed at the Worker URL sees the scoreboard update within about 8 seconds.
+Spectators who are not given the party key get a live read-only view.
+
+Last write wins, so run one host at a time.
+
+## Backend screen
+
+**Backend — set results** lists every question with a three-way Unplayed /
+Correct / Wrong switch. Use it to record a round without walking the penalty
+flow, to fix a mistake, or to un-play a question and put it back in the queue.
+
+The penalty is optional here: None / Drink / Dare plus a free-text description,
+editable at any time. Rounds set this way show "none" as the penalty on the
+scoreboard.
+
+## Random order
+
+The **Random order** toggle on the home screen picks a random unplayed question
+instead of the next one in file order. The choice is made once when the round
+starts, so the question does not change under you mid-round. Off by default,
+and remembered per device.
 
 ## Questions & Answers screen
 
