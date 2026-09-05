@@ -119,7 +119,17 @@
       "result": "correct",
       "timestamp": "2026-09-05T07:45:41.117Z",
       "round": 12
+    },
+    {
+      "questionId": 12,
+      "question": "Hasina’s mother’s surname",
+      "brideAnswer": "",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "wrong",
+      "timestamp": "2026-09-05T08:03:54.198Z",
+      "round": 13
     }
   ],
-  "updatedAt": "2026-09-05T07:46:49.939Z"
+  "updatedAt": "2026-09-05T08:03:54.313Z"
 }
