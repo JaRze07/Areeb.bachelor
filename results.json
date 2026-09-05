@@ -239,7 +239,17 @@
       "penaltyDescription": "Finish",
       "result": "wrong",
       "timestamp": "2026-09-05T14:40:17.163Z"
+    },
+    {
+      "round": 25,
+      "questionId": 15,
+      "question": "Most and least favourite spice",
+      "brideAnswer": "",
+      "penaltyType": "drink",
+      "penaltyDescription": "Finish",
+      "result": "wrong",
+      "timestamp": "2026-09-05T19:26:49.682Z"
     }
   ],
-  "updatedAt": "2026-09-05T14:40:17.382Z"
+  "updatedAt": "2026-09-05T19:26:50.003Z"
 }
