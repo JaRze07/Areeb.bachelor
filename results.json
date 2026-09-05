@@ -209,7 +209,17 @@
       "penaltyDescription": "3 fingers",
       "result": "wrong",
       "timestamp": "2026-09-05T14:35:20.445Z"
+    },
+    {
+      "round": 22,
+      "questionId": 21,
+      "question": "Favourite bucket list holiday destination",
+      "brideAnswer": "Everywhere! Asia tour and south america tour 😂",
+      "penaltyType": "dare",
+      "penaltyDescription": "Show in front of the pensioners",
+      "result": "correct",
+      "timestamp": "2026-09-05T14:38:23.048Z"
     }
   ],
-  "updatedAt": "2026-09-05T14:35:20.598Z"
+  "updatedAt": "2026-09-05T14:38:23.210Z"
 }
