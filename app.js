@@ -839,48 +839,55 @@ async function testSync() {
 
 /* ---------------- wiring ---------------- */
 
+/* A cached HTML/JS mismatch must degrade, not blank the whole screen. */
+function on(id, event, fn) {
+  const node = $(id);
+  if (node) node.addEventListener(event, fn);
+  else console.warn('missing element:', id);
+}
+
 function wire() {
-  $('btn-next-question').addEventListener('click', startRound);
-  $('btn-home-scoreboard').addEventListener('click', () => {
+  on('btn-next-question', 'click', startRound);
+  on('btn-home-scoreboard', 'click', () => {
     filter = 'all'; setActiveFilter(); renderScoreboard(); show('scoreboard');
   });
-  $('btn-home-admin').addEventListener('click', () => { renderAdmin(); show('admin'); });
-  $('btn-home-questions').addEventListener('click', () => { renderQuestions(); show('questions'); });
-  $('btn-home-settings').addEventListener('click', () => { renderSettings(); show('settings'); });
-  $('btn-reset').addEventListener('click', resetGame);
+  on('btn-home-admin', 'click', () => { renderAdmin(); show('admin'); });
+  on('btn-home-questions', 'click', () => { renderQuestions(); show('questions'); });
+  on('btn-home-settings', 'click', () => { renderSettings(); show('settings'); });
+  on('btn-reset', 'click', resetGame);
 
-  $('toggle-shuffle').addEventListener('change', (e) => {
+  on('toggle-shuffle', 'change', (e) => {
     settings.shuffle = e.target.checked;
     saveSettings();
   });
 
-  $('choice-drink').addEventListener('click', () => pickPenaltyType('drink'));
-  $('choice-dare').addEventListener('click', () => pickPenaltyType('dare'));
-  $('penalty-input').addEventListener('input', refreshRevealButton);
-  $('penalty-input').addEventListener('keydown', (e) => {
+  on('choice-drink', 'click', () => pickPenaltyType('drink'));
+  on('choice-dare', 'click', () => pickPenaltyType('dare'));
+  on('penalty-input', 'input', refreshRevealButton);
+  on('penalty-input', 'keydown', (e) => {
     if (e.key === 'Enter' && !$('btn-reveal').disabled) revealQuestion();
   });
-  $('btn-reveal').addEventListener('click', revealQuestion);
+  on('btn-reveal', 'click', revealQuestion);
 
-  $('btn-peek').addEventListener('click', () => {
+  on('btn-peek', 'click', () => {
     $('bride-answer').hidden = false;
     $('btn-peek').hidden = true;
   });
-  $('btn-correct').addEventListener('click', () => judge('correct'));
-  $('btn-wrong').addEventListener('click', () => judge('wrong'));
-  $('btn-penalty-done').addEventListener('click', finishRound);
+  on('btn-correct', 'click', () => judge('correct'));
+  on('btn-wrong', 'click', () => judge('wrong'));
+  on('btn-penalty-done', 'click', finishRound);
 
-  $('btn-submit-question').addEventListener('click', submitNewQuestion);
-  $('btn-download-questions').addEventListener('click', () => downloadJson('questions.json', questions));
-  $('btn-revert-questions').addEventListener('click', revertQuestions);
+  on('btn-submit-question', 'click', submitNewQuestion);
+  on('btn-download-questions', 'click', () => downloadJson('questions.json', questions));
+  on('btn-revert-questions', 'click', revertQuestions);
 
-  $('btn-test-sync').addEventListener('click', testSync);
-  $('btn-pull-now').addEventListener('click', async () => {
+  on('btn-test-sync', 'click', testSync);
+  on('btn-pull-now', 'click', async () => {
     readSettingsForm();
     $('settings-status').textContent = (await pullState(true))
       ? 'Loaded from GitHub.' : 'Could not load: ' + syncStatus.message;
   });
-  $('btn-push-now').addEventListener('click', async () => {
+  on('btn-push-now', 'click', async () => {
     readSettingsForm();
     if (!canWrite()) { $('settings-status').textContent = 'Add the party key to save.'; return; }
     $('settings-status').textContent = (await pushState())
@@ -915,7 +922,7 @@ function wire() {
     });
   });
 
-  $('btn-download').addEventListener('click', downloadResults);
+  on('btn-download', 'click', downloadResults);
 }
 
 async function loadQuestions() {
