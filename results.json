@@ -169,7 +169,17 @@
       "penaltyDescription": "Get an item of clothing from the apartment upstairs or downstairs",
       "result": "wrong",
       "timestamp": "2026-09-05T13:16:44.384Z"
+    },
+    {
+      "round": 18,
+      "questionId": 4,
+      "question": "Sci-fi or romantic comedy",
+      "brideAnswer": "Romantic comedy",
+      "penaltyType": "drink",
+      "penaltyDescription": "1 finger",
+      "result": "correct",
+      "timestamp": "2026-09-05T14:31:43.792Z"
     }
   ],
-  "updatedAt": "2026-09-05T13:16:44.903Z"
+  "updatedAt": "2026-09-05T14:31:43.937Z"
 }
