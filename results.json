@@ -249,7 +249,17 @@
       "penaltyDescription": "Finish",
       "result": "wrong",
       "timestamp": "2026-09-05T19:26:49.682Z"
+    },
+    {
+      "round": 26,
+      "questionId": 33,
+      "question": "Favourite colour?",
+      "brideAnswer": "Green or yellow",
+      "penaltyType": "dare",
+      "penaltyDescription": "Get a phone number from any guy on the street",
+      "result": "correct",
+      "timestamp": "2026-09-05T19:30:57.828Z"
     }
   ],
-  "updatedAt": "2026-09-05T19:26:50.003Z"
+  "updatedAt": "2026-09-05T19:30:58.572Z"
 }
