@@ -126,7 +126,7 @@
       "brideAnswer": "",
       "penaltyType": null,
       "penaltyDescription": "",
-      "result": "wrong",
+      "result": "correct",
       "timestamp": "2026-09-05T08:03:54.198Z",
       "round": 13
     },
@@ -141,5 +141,5 @@
       "round": 14
     }
   ],
-  "updatedAt": "2026-09-05T08:04:11.679Z"
+  "updatedAt": "2026-09-05T11:41:00.045Z"
 }
