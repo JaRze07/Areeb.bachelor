@@ -189,7 +189,17 @@
       "penaltyDescription": "2 fingers",
       "result": "wrong",
       "timestamp": "2026-09-05T14:33:20.134Z"
+    },
+    {
+      "round": 20,
+      "questionId": 24,
+      "question": "Believe in Bitcoin or a total con?",
+      "brideAnswer": "Total con",
+      "penaltyType": "drink",
+      "penaltyDescription": "3 fingers",
+      "result": "correct",
+      "timestamp": "2026-09-05T14:34:36.903Z"
     }
   ],
-  "updatedAt": "2026-09-05T14:33:20.281Z"
+  "updatedAt": "2026-09-05T14:34:37.258Z"
 }
