@@ -219,7 +219,17 @@
       "penaltyDescription": "Show in front of the pensioners",
       "result": "correct",
       "timestamp": "2026-09-05T14:38:23.048Z"
+    },
+    {
+      "round": 23,
+      "questionId": 32,
+      "question": "Winter Olympics or summer?",
+      "brideAnswer": "Summer",
+      "penaltyType": "dare",
+      "penaltyDescription": "Show im front of the pensioners",
+      "result": "correct",
+      "timestamp": "2026-09-05T14:38:55.281Z"
     }
   ],
-  "updatedAt": "2026-09-05T14:38:23.210Z"
+  "updatedAt": "2026-09-05T14:38:55.458Z"
 }
