@@ -179,7 +179,17 @@
       "penaltyDescription": "1 finger",
       "result": "correct",
       "timestamp": "2026-09-05T14:31:43.792Z"
+    },
+    {
+      "round": 19,
+      "questionId": 5,
+      "question": "Marvel or DC?",
+      "brideAnswer": "Neither sorry 😂",
+      "penaltyType": "drink",
+      "penaltyDescription": "2 fingers",
+      "result": "wrong",
+      "timestamp": "2026-09-05T14:33:20.134Z"
     }
   ],
-  "updatedAt": "2026-09-05T14:31:43.937Z"
+  "updatedAt": "2026-09-05T14:33:20.281Z"
 }
