@@ -1,0 +1,125 @@
+{
+  "rounds": [
+    {
+      "round": 1,
+      "questionId": 9,
+      "question": "Best friend",
+      "brideAnswer": "Vicky",
+      "penaltyType": "dare",
+      "penaltyDescription": "Strip shirt and walk out of the restaurant",
+      "result": "correct",
+      "timestamp": null
+    },
+    {
+      "round": 2,
+      "questionId": 20,
+      "question": "Beach or mountains?",
+      "brideAnswer": "Mountains",
+      "penaltyType": "drink",
+      "penaltyDescription": "4 fingers of Corona beer",
+      "result": "correct",
+      "timestamp": null
+    },
+    {
+      "round": 3,
+      "questionId": 37,
+      "question": "Ferrari or Porsche?",
+      "brideAnswer": "Porsche",
+      "penaltyType": "drink",
+      "penaltyDescription": "4 fingers of Corona beer",
+      "result": "wrong",
+      "timestamp": null
+    },
+    {
+      "round": 4,
+      "questionId": 34,
+      "question": "Biggest pet peeve",
+      "brideAnswer": "",
+      "penaltyType": "drink",
+      "penaltyDescription": "5 fingers of Corona",
+      "result": "wrong",
+      "timestamp": null
+    },
+    {
+      "questionId": 1,
+      "question": "Favourite artist?",
+      "brideAnswer": "Imagine dragons",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "correct",
+      "timestamp": "2026-09-05T07:44:36.287Z",
+      "round": 5
+    },
+    {
+      "questionId": 6,
+      "question": "Superman or Spiderman?",
+      "brideAnswer": "Spiderman",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "wrong",
+      "timestamp": "2026-09-05T07:44:46.349Z",
+      "round": 6
+    },
+    {
+      "questionId": 19,
+      "question": "Coffee or tea?",
+      "brideAnswer": "Depends on the mood, mostly coffee. But if Areeb is making chai then always chai",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "wrong",
+      "timestamp": "2026-09-05T07:45:11.115Z",
+      "round": 7
+    },
+    {
+      "questionId": 22,
+      "question": "Best place ever travelled to",
+      "brideAnswer": "Switzerland",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "wrong",
+      "timestamp": "2026-09-05T07:45:21.099Z",
+      "round": 8
+    },
+    {
+      "questionId": 23,
+      "question": "Ski or surf",
+      "brideAnswer": "Neither pls",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "wrong",
+      "timestamp": "2026-09-05T07:45:24.011Z",
+      "round": 9
+    },
+    {
+      "questionId": 27,
+      "question": "Are you left or right handed?",
+      "brideAnswer": "Right handed",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "correct",
+      "timestamp": "2026-09-05T07:45:32.478Z",
+      "round": 10
+    },
+    {
+      "questionId": 29,
+      "question": "Liverpool or Arsenal?",
+      "brideAnswer": "Liverpool",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "correct",
+      "timestamp": "2026-09-05T07:45:36.081Z",
+      "round": 11
+    },
+    {
+      "questionId": 31,
+      "question": "Messi or Ronaldo?",
+      "brideAnswer": "Ronaldo",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "correct",
+      "timestamp": "2026-09-05T07:45:41.117Z",
+      "round": 12
+    }
+  ],
+  "updatedAt": "2026-09-05T07:46:49.939Z"
+}
