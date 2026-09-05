@@ -269,7 +269,17 @@
       "penaltyDescription": "Get the laser baloon",
       "result": "correct",
       "timestamp": "2026-09-05T20:52:19.610Z"
+    },
+    {
+      "round": 28,
+      "questionId": 14,
+      "question": "Least favourite food",
+      "brideAnswer": "Maksalaatikko",
+      "penaltyType": "drink",
+      "penaltyDescription": "1 soju finger",
+      "result": "wrong",
+      "timestamp": "2026-09-05T22:10:07.351Z"
     }
   ],
-  "updatedAt": "2026-09-05T20:52:19.876Z"
+  "updatedAt": "2026-09-05T22:10:07.549Z"
 }
