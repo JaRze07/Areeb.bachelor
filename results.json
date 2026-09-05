@@ -289,7 +289,17 @@
       "penaltyDescription": "1 finger",
       "result": "correct",
       "timestamp": "2026-09-05T22:10:51.947Z"
+    },
+    {
+      "round": 30,
+      "questionId": 26,
+      "question": "Trump or Anyone else?",
+      "brideAnswer": "Idc about americans, theyre all the same",
+      "penaltyType": "drink",
+      "penaltyDescription": "1 finger",
+      "result": "wrong",
+      "timestamp": "2026-09-05T22:12:18.792Z"
     }
   ],
-  "updatedAt": "2026-09-05T22:10:52.171Z"
+  "updatedAt": "2026-09-05T22:12:19.099Z"
 }
