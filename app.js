@@ -29,6 +29,11 @@ let adminFilter = 'all';
 let syncStatus = { mode: 'off', at: null, message: '' };
 let pollTimer = null;
 let questionsUpdatedAt = new Date(0).toISOString();
+/* True while this device holds a change the server has not accepted yet.
+   Clocks across phones cannot be trusted, so "who is newer" is decided by
+   whether WE have unsaved work — not by comparing timestamps. */
+let resultsDirty = false;
+let questionsDirty = false;
 
 function freshState() {
   return {
@@ -63,6 +68,7 @@ function saveState() { writeStore(STATE_KEY, JSON.stringify(state)); }
 function saveQuestions() {
   writeStore(QUESTIONS_KEY, JSON.stringify(questions));
   questionsUpdatedAt = new Date().toISOString();
+  questionsDirty = true;
   writeStore(QUESTIONS_META_KEY, JSON.stringify({ updatedAt: questionsUpdatedAt }));
 }
 function saveSettings() { writeStore(SETTINGS_KEY, JSON.stringify(settings)); }
@@ -70,6 +76,7 @@ function saveSettings() { writeStore(SETTINGS_KEY, JSON.stringify(settings)); }
 /* Every local change stamps a time, so the newest edit wins across devices. */
 function touch() {
   state.updatedAt = new Date().toISOString();
+  resultsDirty = true;
   saveState();
   pushState();
 }
@@ -112,7 +119,7 @@ function loadSettings() {
 /* ---------------- sync ---------------- */
 
 function syncConfigured() { return Boolean(settings.workerUrl); }
-function canWrite() { return Boolean(settings.workerUrl && settings.partyKey); }
+function canWrite() { return syncConfigured(); }
 
 function workerBase() { return settings.workerUrl.replace(/\/+$/, ''); }
 function endpoint() { return workerBase() + '/results'; }
@@ -126,10 +133,21 @@ async function pullState(force) {
     const remote = await res.json();
     if (!remote || !Array.isArray(remote.rounds)) throw new Error('bad payload');
 
-    const newer = remote.updatedAt && remote.updatedAt > state.updatedAt;
-    if (force || newer) {
+    /* Clean device: the server is the truth, always. Dirty device: push first. */
+    if (resultsDirty && !force) {
+      await pushState();
+      return true;
+    }
+    /* Never let an empty server response wipe a device that holds real data. */
+    if (!remote.rounds.length && state.rounds.length) {
+      resultsDirty = true;
+      await pushState();
+      return true;
+    }
+    if (force || JSON.stringify(remote.rounds) !== JSON.stringify(state.rounds)) {
       state.rounds = renumber(remote.rounds);
       state.updatedAt = remote.updatedAt || new Date().toISOString();
+      resultsDirty = false;
       saveState();
       refreshCurrentScreen();
     }
@@ -142,19 +160,29 @@ async function pullState(force) {
 }
 
 async function pushState() {
-  if (!canWrite()) return false;
+  if (!syncConfigured()) return false;
   try {
     const res = await fetch(endpoint(), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Party-Key': settings.partyKey },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rounds: state.rounds })
     });
-    if (!res.ok) throw new Error(res.status === 401 ? 'wrong party key' : 'HTTP ' + res.status);
+    if (!res.ok) {
+      let detail = 'HTTP ' + res.status;
+      try { const body = await res.json(); if (body && body.error) detail = body.error; } catch (e) {}
+      throw new Error(detail);
+    }
     const saved = await res.json();
-    if (saved && saved.updatedAt) { state.updatedAt = saved.updatedAt; saveState(); }
+    if (saved) {
+      if (Array.isArray(saved.rounds)) state.rounds = renumber(saved.rounds);
+      if (saved.updatedAt) state.updatedAt = saved.updatedAt;
+    }
+    resultsDirty = false;
+    saveState();
     setSync('live', '');
     return true;
   } catch (err) {
+    resultsDirty = true;   /* keep retrying on the next poll */
     setSync('error', String(err.message || err));
     return false;
   }
@@ -168,8 +196,16 @@ async function pullQuestions(force) {
     const remote = await res.json();
     if (!remote || !Array.isArray(remote.questions)) throw new Error('bad payload');
 
-    const newer = remote.updatedAt && remote.updatedAt > questionsUpdatedAt;
-    if (force || newer) {
+    if (questionsDirty && !force) {
+      await pushQuestions();
+      return true;
+    }
+    if (!remote.questions.length && questions.length) {
+      questionsDirty = true;
+      await pushQuestions();
+      return true;
+    }
+    if (force || JSON.stringify(remote.questions) !== JSON.stringify(questions)) {
       questions = remote.questions;
       questionsUpdatedAt = remote.updatedAt || new Date().toISOString();
       writeStore(QUESTIONS_KEY, JSON.stringify(questions));
@@ -197,14 +233,22 @@ async function pushQuestions() {
       throw new Error(detail);
     }
     const saved = await res.json();
-    if (saved && saved.updatedAt) {
-      questionsUpdatedAt = saved.updatedAt;
-      writeStore(QUESTIONS_META_KEY, JSON.stringify({ updatedAt: questionsUpdatedAt }));
+    if (saved) {
+      if (Array.isArray(saved.questions)) {
+        questions = saved.questions;
+        writeStore(QUESTIONS_KEY, JSON.stringify(questions));
+      }
+      if (saved.updatedAt) {
+        questionsUpdatedAt = saved.updatedAt;
+        writeStore(QUESTIONS_META_KEY, JSON.stringify({ updatedAt: questionsUpdatedAt }));
+      }
     }
+    questionsDirty = false;
     setSync('live', '');
     if (state.screen === 'questions') renderQuestionsSummary();
     return true;
   } catch (err) {
+    questionsDirty = true;
     setSync('error', String(err.message || err));
     if (state.screen === 'questions') renderQuestionsSummary();
     return false;
@@ -224,6 +268,10 @@ function startPolling() {
     if (state.screen === 'home' || state.screen === 'scoreboard' || state.screen === 'admin') {
       pullState(false);
       pullQuestions(false);
+    } else if (resultsDirty || questionsDirty) {
+      /* Mid-round or mid-edit: don't pull, but keep trying to save. */
+      if (resultsDirty) pushState();
+      if (questionsDirty) pushQuestions();
     }
   }, POLL_MS);
 }
@@ -236,6 +284,14 @@ function renderSyncLine() {
     el.textContent = 'This device only — results are not saved to GitHub.';
     return;
   }
+  /* Unsaved work outranks a bare error: it tells the user their change
+     has not reached anyone else yet, which is what actually matters. */
+  if (resultsDirty || questionsDirty) {
+    el.className = 'sync-line sync-bad';
+    el.textContent = 'Not saved yet — retrying' +
+      (syncStatus.mode === 'error' && syncStatus.message ? ' (' + syncStatus.message + ')' : '…');
+    return;
+  }
   if (syncStatus.mode === 'error') {
     el.className = 'sync-line sync-bad';
     el.textContent = 'Sync problem: ' + syncStatus.message;
@@ -243,7 +299,7 @@ function renderSyncLine() {
   }
   el.className = 'sync-line sync-ok';
   const when = syncStatus.at ? timeAgo(syncStatus.at) : 'not yet';
-  el.textContent = (canWrite() ? 'Live · saving to GitHub · ' : 'Live · read only · ') + when;
+  el.textContent = 'Live · everyone sees this · ' + when;
 }
 
 function timeAgo(d) {
@@ -802,8 +858,8 @@ function renderSettings() {
   $('worker-url').value = settings.workerUrl || '';
   $('party-key').value = settings.partyKey || '';
   $('settings-status').textContent = syncConfigured()
-    ? (canWrite() ? 'Configured for saving.' : 'Configured read-only (no party key).')
-    : 'Not configured — this device only.';
+    ? 'Connected — everyone shares the same scoreboard and questions.'
+    : 'Not connected — this device only.';
 }
 
 function readSettingsForm() {
@@ -828,7 +884,7 @@ async function testSync() {
     }
     const pulled = await pullState(false);
     box.textContent = pulled
-      ? (canWrite() ? 'Connected. Results will save to GitHub.' : 'Connected, read only — add the party key to save.')
+      ? 'Connected. Everything saves to GitHub.'
       : 'Worker reachable but reading results failed.';
   } catch (err) {
     box.textContent = 'Could not reach the Worker: ' + (err.message || err);
@@ -889,7 +945,6 @@ function wire() {
   });
   on('btn-push-now', 'click', async () => {
     readSettingsForm();
-    if (!canWrite()) { $('settings-status').textContent = 'Add the party key to save.'; return; }
     $('settings-status').textContent = (await pushState())
       ? 'Saved to GitHub.' : 'Could not save: ' + syncStatus.message;
   });

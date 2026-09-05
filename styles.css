@@ -362,3 +362,11 @@ body {
 
 .q-save { margin-top: 4px; }
 .q-save:disabled { opacity: 1; background: var(--surface-2); color: var(--muted); }
+
+/* Questions may be written with deliberate line breaks (e.g. trap cards).
+   pre-line keeps the newlines while still collapsing stray spaces. */
+.question-text,
+.penalty-text,
+.bride-answer p,
+.a-question,
+.results .col-q { white-space: pre-line; }

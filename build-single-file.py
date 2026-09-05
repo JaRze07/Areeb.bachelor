@@ -10,9 +10,9 @@ questions = _raw if isinstance(_raw, list) else _raw.get('questions', [])
 
 embedded = 'window.EMBEDDED_QUESTIONS = ' + json.dumps(questions, ensure_ascii=False, indent=2) + ';'
 
-html = html.replace('<link rel="stylesheet" href="styles.css?v=4">',
+html = html.replace('<link rel="stylesheet" href="styles.css?v=5">',
                     '<style>\n' + css + '\n</style>')
-html = html.replace('<script src="app.js?v=4"></script>',
+html = html.replace('<script src="app.js?v=5"></script>',
                     '<script>\n' + embedded + '\n\n' + js + '\n</script>')
 
 assert '<style>' in html and 'EMBEDDED_QUESTIONS' in html
