@@ -309,7 +309,17 @@
       "penaltyDescription": "2 fingers",
       "result": "correct",
       "timestamp": "2026-09-05T22:12:56.781Z"
+    },
+    {
+      "round": 32,
+      "questionId": 11,
+      "question": "Worse enemy",
+      "brideAnswer": "😂 No one",
+      "penaltyType": "drink",
+      "penaltyDescription": "2 fingers",
+      "result": "wrong",
+      "timestamp": "2026-09-05T22:14:56.676Z"
     }
   ],
-  "updatedAt": "2026-09-05T22:12:56.878Z"
+  "updatedAt": "2026-09-05T22:14:56.877Z"
 }
