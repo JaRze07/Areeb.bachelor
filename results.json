@@ -229,7 +229,17 @@
       "penaltyDescription": "Show im front of the pensioners",
       "result": "correct",
       "timestamp": "2026-09-05T14:38:55.281Z"
+    },
+    {
+      "round": 24,
+      "questionId": 38,
+      "question": "Electric or petrol?",
+      "brideAnswer": "Whatever Areeb drives 😂",
+      "penaltyType": "drink",
+      "penaltyDescription": "Finish",
+      "result": "wrong",
+      "timestamp": "2026-09-05T14:40:17.163Z"
     }
   ],
-  "updatedAt": "2026-09-05T14:38:55.458Z"
+  "updatedAt": "2026-09-05T14:40:17.382Z"
 }
