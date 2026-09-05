@@ -129,7 +129,17 @@
       "result": "wrong",
       "timestamp": "2026-09-05T08:03:54.198Z",
       "round": 13
+    },
+    {
+      "questionId": 39,
+      "question": "What primary school did Hasina go to, and what method of transport did she take? (worth two penalties if wrong, two penalties to give to others if right)",
+      "brideAnswer": "",
+      "penaltyType": null,
+      "penaltyDescription": "",
+      "result": "wrong",
+      "timestamp": "2026-09-05T08:04:11.603Z",
+      "round": 14
     }
   ],
-  "updatedAt": "2026-09-05T08:03:54.313Z"
+  "updatedAt": "2026-09-05T08:04:11.679Z"
 }
