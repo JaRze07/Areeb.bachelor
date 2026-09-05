@@ -279,7 +279,17 @@
       "penaltyDescription": "1 soju finger",
       "result": "wrong",
       "timestamp": "2026-09-05T22:10:07.351Z"
+    },
+    {
+      "round": 29,
+      "questionId": 35,
+      "question": "Plane or train?",
+      "brideAnswer": "Plane",
+      "penaltyType": "drink",
+      "penaltyDescription": "1 finger",
+      "result": "correct",
+      "timestamp": "2026-09-05T22:10:51.947Z"
     }
   ],
-  "updatedAt": "2026-09-05T22:10:07.845Z"
+  "updatedAt": "2026-09-05T22:10:52.171Z"
 }
