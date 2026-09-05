@@ -159,7 +159,17 @@
       "penaltyDescription": "Down the rest of he beer",
       "result": "wrong",
       "timestamp": "2026-09-05T13:13:11.152Z"
+    },
+    {
+      "round": 17,
+      "questionId": 3,
+      "question": "Favourite movie",
+      "brideAnswer": "Currently: Taare zameen par",
+      "penaltyType": "dare",
+      "penaltyDescription": "Get an item of clothing from the apartment upstairs or downstairs",
+      "result": "wrong",
+      "timestamp": "2026-09-05T13:16:44.384Z"
     }
   ],
-  "updatedAt": "2026-09-05T13:13:11.292Z"
+  "updatedAt": "2026-09-05T13:16:44.903Z"
 }
