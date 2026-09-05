@@ -199,7 +199,17 @@
       "penaltyDescription": "3 fingers",
       "result": "correct",
       "timestamp": "2026-09-05T14:34:36.903Z"
+    },
+    {
+      "round": 21,
+      "questionId": 18,
+      "question": "Ideal breakfast",
+      "brideAnswer": "Usually i skip it 😂 but if I have to choose: afghan style eggs with tomatoes",
+      "penaltyType": "drink",
+      "penaltyDescription": "3 fingers",
+      "result": "wrong",
+      "timestamp": "2026-09-05T14:35:20.445Z"
     }
   ],
-  "updatedAt": "2026-09-05T14:34:37.258Z"
+  "updatedAt": "2026-09-05T14:35:20.598Z"
 }
