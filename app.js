@@ -3,6 +3,9 @@
 const STATE_KEY = 'hasina-state-v2';
 const QUESTIONS_KEY = 'hasina-questions-v2';
 const SETTINGS_KEY = 'hasina-settings-v1';
+const QUESTIONS_META_KEY = 'hasina-questions-meta-v1';
+/* Baked in so guests need no setup at all — the URL is public anyway. */
+const DEFAULT_WORKER_URL = 'https://areeb-bachelor-results.jacekrzepny2.workers.dev';
 const POLL_MS = 8000;
 
 /* Rounds played before the app existed. questionId points into questions.json;
@@ -19,12 +22,13 @@ let fileQuestions = [];
 let questionsError = null;
 
 let state = freshState();
-let settings = { workerUrl: '', partyKey: '', shuffle: false };
+let settings = { workerUrl: DEFAULT_WORKER_URL, partyKey: '', shuffle: false };
 
 let filter = 'all';
 let adminFilter = 'all';
 let syncStatus = { mode: 'off', at: null, message: '' };
 let pollTimer = null;
+let questionsUpdatedAt = new Date(0).toISOString();
 
 function freshState() {
   return {
@@ -55,7 +59,12 @@ function clearStore(key) {
 }
 
 function saveState() { writeStore(STATE_KEY, JSON.stringify(state)); }
-function saveQuestions() { writeStore(QUESTIONS_KEY, JSON.stringify(questions)); }
+/* Local only. Sharing with everyone else happens on an explicit Submit. */
+function saveQuestions() {
+  writeStore(QUESTIONS_KEY, JSON.stringify(questions));
+  questionsUpdatedAt = new Date().toISOString();
+  writeStore(QUESTIONS_META_KEY, JSON.stringify({ updatedAt: questionsUpdatedAt }));
+}
 function saveSettings() { writeStore(SETTINGS_KEY, JSON.stringify(settings)); }
 
 /* Every local change stamps a time, so the newest edit wins across devices. */
@@ -82,6 +91,15 @@ function loadState() {
   } catch (err) { /* corrupt — start fresh rather than crash mid-party */ }
 }
 
+function loadQuestionsMeta() {
+  const raw = readStore(QUESTIONS_META_KEY);
+  if (!raw) return;
+  try {
+    const meta = JSON.parse(raw);
+    if (meta && meta.updatedAt) questionsUpdatedAt = meta.updatedAt;
+  } catch (err) { /* ignore */ }
+}
+
 function loadSettings() {
   const raw = readStore(SETTINGS_KEY);
   if (!raw) return;
@@ -96,9 +114,9 @@ function loadSettings() {
 function syncConfigured() { return Boolean(settings.workerUrl); }
 function canWrite() { return Boolean(settings.workerUrl && settings.partyKey); }
 
-function endpoint() {
-  return settings.workerUrl.replace(/\/+$/, '') + '/results';
-}
+function workerBase() { return settings.workerUrl.replace(/\/+$/, ''); }
+function endpoint() { return workerBase() + '/results'; }
+function questionsEndpoint() { return workerBase() + '/questions'; }
 
 async function pullState(force) {
   if (!syncConfigured()) return false;
@@ -142,6 +160,57 @@ async function pushState() {
   }
 }
 
+async function pullQuestions(force) {
+  if (!syncConfigured()) return false;
+  try {
+    const res = await fetch(questionsEndpoint(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const remote = await res.json();
+    if (!remote || !Array.isArray(remote.questions)) throw new Error('bad payload');
+
+    const newer = remote.updatedAt && remote.updatedAt > questionsUpdatedAt;
+    if (force || newer) {
+      questions = remote.questions;
+      questionsUpdatedAt = remote.updatedAt || new Date().toISOString();
+      writeStore(QUESTIONS_KEY, JSON.stringify(questions));
+      writeStore(QUESTIONS_META_KEY, JSON.stringify({ updatedAt: questionsUpdatedAt }));
+      refreshCurrentScreen();
+    }
+    return true;
+  } catch (err) {
+    setSync('error', String(err.message || err));
+    return false;
+  }
+}
+
+async function pushQuestions() {
+  if (!syncConfigured()) return false;
+  try {
+    const res = await fetch(questionsEndpoint(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questions: questions })
+    });
+    if (!res.ok) {
+      let detail = 'HTTP ' + res.status;
+      try { const body = await res.json(); if (body && body.error) detail = body.error; } catch (e) {}
+      throw new Error(detail);
+    }
+    const saved = await res.json();
+    if (saved && saved.updatedAt) {
+      questionsUpdatedAt = saved.updatedAt;
+      writeStore(QUESTIONS_META_KEY, JSON.stringify({ updatedAt: questionsUpdatedAt }));
+    }
+    setSync('live', '');
+    if (state.screen === 'questions') renderQuestionsSummary();
+    return true;
+  } catch (err) {
+    setSync('error', String(err.message || err));
+    if (state.screen === 'questions') renderQuestionsSummary();
+    return false;
+  }
+}
+
 function setSync(mode, message) {
   syncStatus = { mode: mode, at: new Date(), message: message };
   renderSyncLine();
@@ -151,8 +220,11 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   if (!syncConfigured()) return;
   pollTimer = setInterval(() => {
-    /* Never yank the board out from under a round in progress. */
-    if (state.screen === 'home' || state.screen === 'scoreboard') pullState(false);
+    /* Never yank the board out from under a round in progress, or a field being typed in. */
+    if (state.screen === 'home' || state.screen === 'scoreboard' || state.screen === 'admin') {
+      pullState(false);
+      pullQuestions(false);
+    }
   }, POLL_MS);
 }
 
@@ -469,16 +541,34 @@ function setPenaltyType(questionId, value) {
 
 /* ---------------- questions editor ---------------- */
 
-function renderQuestions() {
-  const played = playedIds();
-  $('questions-summary').textContent =
-    `${questions.length} total · ${unplayedQuestions().length} still to play · edits save automatically`;
+function renderQuestionsSummary() {
+  const box = $('questions-summary');
+  if (!box) return;
+  const bits = [`${questions.length} questions`, `${unplayedQuestions().length} still to play`];
+  box.textContent = bits.join(' · ');
 
+  const status = $('questions-sync');
+  if (!status) return;
+  if (!syncConfigured()) {
+    status.className = 'sync-line sync-off';
+    status.textContent = 'Not connected — questions stay on this device.';
+  } else if (syncStatus.mode === 'error') {
+    status.className = 'sync-line sync-bad';
+    status.textContent = 'Last submit failed: ' + syncStatus.message;
+  } else {
+    status.className = 'sync-line sync-ok';
+    status.textContent = 'Shared with everyone · anyone can add a question';
+  }
+}
+
+function renderQuestions() {
+  renderQuestionsSummary();
+  const played = playedIds();
   const list = $('questions-list');
   list.innerHTML = '';
 
   if (!questions.length) {
-    list.appendChild(el('p', 'empty', 'No questions yet. Tap "Add question" to write the first one.'));
+    list.appendChild(el('p', 'empty', 'No questions yet. Add the first one above.'));
     return;
   }
 
@@ -495,9 +585,26 @@ function renderQuestions() {
     head.appendChild(del);
     card.appendChild(head);
 
-    card.appendChild(makeField('Theme', 'input', q.theme || '', (v) => { q.theme = v; saveQuestions(); }));
-    card.appendChild(makeField('Question', 'textarea', q.question || '', (v) => { q.question = v; saveQuestions(); }));
-    card.appendChild(makeField("Hasina's answer", 'textarea', q.brideAnswer || '', (v) => { q.brideAnswer = v; saveQuestions(); }));
+    const save = el('button', 'btn btn-primary q-save', 'Save changes');
+    save.type = 'button';
+    save.disabled = true;
+
+    const markDirty = () => { save.disabled = false; save.textContent = 'Save changes'; };
+
+    card.appendChild(makeField('Theme', 'input', q.theme || '', (v) => { q.theme = v; markDirty(); }));
+    card.appendChild(makeField('Question', 'textarea', q.question || '', (v) => { q.question = v; markDirty(); }));
+    card.appendChild(makeField("Hasina's answer", 'textarea', q.brideAnswer || '', (v) => { q.brideAnswer = v; markDirty(); }));
+
+    save.addEventListener('click', async () => {
+      save.disabled = true;
+      save.textContent = 'Saving…';
+      saveQuestions();
+      const ok = !syncConfigured() || (await pushQuestions());
+      save.textContent = ok ? 'Saved' : 'Failed — tap to retry';
+      save.disabled = ok;
+      renderQuestionsSummary();
+    });
+    card.appendChild(save);
 
     list.appendChild(card);
   });
@@ -522,30 +629,59 @@ function autoGrow(input) {
   input.style.height = input.scrollHeight + 'px';
 }
 
-function addQuestion() {
-  questions.push({ id: nextQuestionId(), theme: '', question: '', brideAnswer: '' });
-  saveQuestions();
-  renderQuestions();
-  const cards = document.querySelectorAll('.q-card');
-  const last = cards[cards.length - 1];
-  if (last) {
-    last.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    const box = last.querySelectorAll('textarea')[0];
-    if (box) box.focus();
+async function submitNewQuestion() {
+  const theme = $('new-theme').value.trim();
+  const text = $('new-question').value.trim();
+  const answer = $('new-answer').value.trim();
+  const btn = $('btn-submit-question');
+  const note = $('new-question-note');
+
+  if (!text) {
+    note.textContent = 'Write the question first.';
+    note.className = 'form-note is-bad';
+    $('new-question').focus();
+    return;
   }
+
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const added = { id: nextQuestionId(), theme: theme, question: text, brideAnswer: answer };
+  questions.push(added);
+  saveQuestions();
+
+  const ok = !syncConfigured() || (await pushQuestions());
+  if (ok) {
+    $('new-theme').value = '';
+    $('new-question').value = '';
+    $('new-answer').value = '';
+    note.textContent = syncConfigured()
+      ? `Added and shared with everyone — #${added.id}`
+      : `Added on this device — #${added.id}`;
+    note.className = 'form-note is-good';
+  } else {
+    note.textContent = 'Saved here but could not share it: ' + syncStatus.message;
+    note.className = 'form-note is-bad';
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Submit question';
+  renderQuestions();
 }
 
-function deleteQuestion(id) {
+async function deleteQuestion(id) {
   const q = questions.find((item) => item.id === id);
   const label = q && q.question ? `"${q.question}"` : 'this question';
-  if (!window.confirm(`Delete ${label}? Rounds already played keep their record.`)) return;
+  if (!window.confirm(`Delete ${label} for everyone? Rounds already played keep their record.`)) return;
   questions = questions.filter((item) => item.id !== id);
   saveQuestions();
+  await pushQuestions();
   renderQuestions();
 }
 
-function revertQuestions() {
-  if (!window.confirm('Discard your edits and reload questions.json from the repo?')) return;
+async function revertQuestions() {
+  if (!window.confirm('Reload the shared question list, discarding anything unsaved here?')) return;
+  if (syncConfigured() && (await pullQuestions(true))) { renderQuestions(); return; }
   questions = fileQuestions.map((q) => ({ ...q }));
   clearStore(QUESTIONS_KEY);
   renderQuestions();
@@ -734,7 +870,7 @@ function wire() {
   $('btn-wrong').addEventListener('click', () => judge('wrong'));
   $('btn-penalty-done').addEventListener('click', finishRound);
 
-  $('btn-add-question').addEventListener('click', addQuestion);
+  $('btn-submit-question').addEventListener('click', submitNewQuestion);
   $('btn-download-questions').addEventListener('click', () => downloadJson('questions.json', questions));
   $('btn-revert-questions').addEventListener('click', revertQuestions);
 
@@ -783,15 +919,22 @@ function wire() {
 }
 
 async function loadQuestions() {
-  if (Array.isArray(window.EMBEDDED_QUESTIONS)) {
-    fileQuestions = window.EMBEDDED_QUESTIONS;
+  const embedded = window.EMBEDDED_QUESTIONS;
+  if (Array.isArray(embedded) || (embedded && Array.isArray(embedded.questions))) {
+    fileQuestions = Array.isArray(embedded) ? embedded : embedded.questions;
   } else {
     try {
       const res = await fetch('questions.json', { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      if (!Array.isArray(data)) throw new Error('questions.json must be an array');
-      fileQuestions = data;
+      /* Bare array is the original committed shape; the Worker writes the
+         wrapped form once questions sync is on. Accept both. */
+      const list = Array.isArray(data) ? data : (data && data.questions);
+      if (!Array.isArray(list)) throw new Error('questions.json has an unexpected shape');
+      fileQuestions = list;
+      if (data && data.updatedAt && data.updatedAt > questionsUpdatedAt) {
+        questionsUpdatedAt = data.updatedAt;
+      }
     } catch (err) {
       questionsError = 'Could not load questions.json (' + err.message + ').';
     }
@@ -810,6 +953,7 @@ async function loadQuestions() {
 async function init() {
   loadState();
   loadSettings();
+  loadQuestionsMeta();
   wire();
   await loadQuestions();
 
@@ -822,7 +966,11 @@ async function init() {
     show('home');
   }
 
-  if (syncConfigured()) { await pullState(false); startPolling(); }
+  if (syncConfigured()) {
+    await Promise.all([pullState(false), pullQuestions(false)]);
+    renderHome();
+    startPolling();
+  }
   renderSyncLine();
 }
 

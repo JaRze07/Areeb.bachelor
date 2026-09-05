@@ -117,11 +117,30 @@
       <h2 class="screen-title">Questions &amp; Answers</h2>
     </header>
     <div class="stack">
+      <div class="sync-line" id="questions-sync"></div>
       <p class="lede" id="questions-summary"></p>
-      <button class="btn btn-primary" id="btn-add-question">Add question</button>
+
+      <div class="add-box">
+        <p class="add-title">Add a question</p>
+        <label class="field q-field">
+          <span class="field-label">Theme (optional)</span>
+          <input type="text" id="new-theme" placeholder="e.g. Music" autocomplete="off">
+        </label>
+        <label class="field q-field">
+          <span class="field-label">Question</span>
+          <textarea id="new-question" rows="2" placeholder="What's her go-to karaoke song?"></textarea>
+        </label>
+        <label class="field q-field">
+          <span class="field-label">Hasina's answer (optional)</span>
+          <textarea id="new-answer" rows="2" placeholder="Leave blank if you don't know yet"></textarea>
+        </label>
+        <button class="btn btn-primary" id="btn-submit-question">Submit question</button>
+        <p class="form-note" id="new-question-note"></p>
+      </div>
+
       <div id="questions-list"></div>
       <button class="btn btn-ghost" id="btn-download-questions">Download questions.json</button>
-      <button class="btn btn-quiet" id="btn-revert-questions">Discard edits, reload questions.json</button>
+      <button class="btn btn-quiet" id="btn-revert-questions">Reload shared list</button>
     </div>
   </section>
 
@@ -140,7 +159,7 @@
                autocomplete="off" autocapitalize="off" spellcheck="false">
       </label>
       <label class="field">
-        <span class="field-label">Party key (needed only to save)</span>
+        <span class="field-label">Party key (host only — needed to save results)</span>
         <input type="password" id="party-key" placeholder="the PARTY_KEY secret"
                autocomplete="off" autocapitalize="off" spellcheck="false">
       </label>
@@ -148,8 +167,8 @@
       <div class="progress" id="settings-status">Not tested yet.</div>
       <button class="btn btn-ghost" id="btn-pull-now">Load results from GitHub</button>
       <button class="btn btn-ghost" id="btn-push-now">Save results to GitHub now</button>
-      <p class="lede small">Spectators can leave the party key blank &mdash; they will see the live
-        scoreboard but cannot change it.</p>
+      <p class="lede small">Already filled in for you. Guests can leave the party key blank &mdash;
+        they get the live scoreboard and can add questions, but cannot change results.</p>
     </div>
   </section>
 

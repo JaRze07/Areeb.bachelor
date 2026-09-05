@@ -5,7 +5,8 @@ import json, io
 html = io.open('index.html', encoding='utf-8').read()
 css = io.open('styles.css', encoding='utf-8').read()
 js = io.open('app.js', encoding='utf-8').read()
-questions = json.load(io.open('questions.json', encoding='utf-8'))
+_raw = json.load(io.open('questions.json', encoding='utf-8'))
+questions = _raw if isinstance(_raw, list) else _raw.get('questions', [])
 
 embedded = 'window.EMBEDDED_QUESTIONS = ' + json.dumps(questions, ensure_ascii=False, indent=2) + ';'
 

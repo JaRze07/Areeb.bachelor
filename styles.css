@@ -338,3 +338,27 @@ body {
 }
 
 .lede.small { font-size: 13px; }
+
+/* ---------- add-question form ---------- */
+.add-box {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.add-title { font-size: 17px; font-weight: 800; margin: 0; }
+.add-box textarea {
+  font: inherit; font-size: 16px; padding: 12px 14px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); width: 100%;
+  resize: vertical; line-height: 1.4;
+}
+.add-box input:focus, .add-box textarea:focus {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+
+.form-note { font-size: 13px; margin: 0; min-height: 1em; }
+.form-note.is-good { color: var(--correct); }
+.form-note.is-bad { color: var(--wrong); }
+
+.q-save { margin-top: 4px; }
+.q-save:disabled { opacity: 1; background: var(--surface-2); color: var(--muted); }
