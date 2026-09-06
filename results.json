@@ -359,7 +359,17 @@
       "penaltyDescription": "Same as last time. Kiss on a cheek from any girl",
       "result": "correct",
       "timestamp": "2026-09-06T01:03:26.213Z"
+    },
+    {
+      "round": 37,
+      "questionId": 36,
+      "question": "Bus or taxi?",
+      "brideAnswer": "Taxi",
+      "penaltyType": "dare",
+      "penaltyDescription": "Same as last time. Kiss on a cheek from any girl",
+      "result": "wrong",
+      "timestamp": "2026-09-06T01:04:36.112Z"
     }
   ],
-  "updatedAt": "2026-09-06T01:03:26.734Z"
+  "updatedAt": "2026-09-06T01:04:36.740Z"
 }
