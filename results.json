@@ -379,7 +379,17 @@
       "penaltyDescription": "50 situps in the middle",
       "result": "wrong",
       "timestamp": "2026-09-06T01:32:13.643Z"
+    },
+    {
+      "round": 39,
+      "questionId": 25,
+      "question": "Save for tomorrow or spend for today?",
+      "brideAnswer": "Save",
+      "penaltyType": "dare",
+      "penaltyDescription": "Do what the just kiss me shirt guy says",
+      "result": "wrong",
+      "timestamp": "2026-09-06T01:51:38.958Z"
     }
   ],
-  "updatedAt": "2026-09-06T01:32:13.946Z"
+  "updatedAt": "2026-09-06T01:51:39.733Z"
 }
