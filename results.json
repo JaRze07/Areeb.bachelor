@@ -349,7 +349,17 @@
       "penaltyDescription": "RRR dance",
       "result": "correct",
       "timestamp": "2026-09-06T00:16:38.403Z"
+    },
+    {
+      "round": 36,
+      "questionId": 30,
+      "question": "Liverpool or Man Utd?",
+      "brideAnswer": "Liverpool",
+      "penaltyType": "dare",
+      "penaltyDescription": "Same as last time. Kiss on a cheek from any girl",
+      "result": "correct",
+      "timestamp": "2026-09-06T01:03:26.213Z"
     }
   ],
-  "updatedAt": "2026-09-06T00:16:38.651Z"
+  "updatedAt": "2026-09-06T01:03:26.734Z"
 }
