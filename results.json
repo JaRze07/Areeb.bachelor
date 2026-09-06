@@ -339,7 +339,17 @@
       "penaltyDescription": "A kiss from a girl (cheek only, even bartender)",
       "result": "correct",
       "timestamp": "2026-09-06T00:08:39.772Z"
+    },
+    {
+      "round": 35,
+      "questionId": 16,
+      "question": "Least favourite juice",
+      "brideAnswer": "",
+      "penaltyType": "dare",
+      "penaltyDescription": "RRR dance",
+      "result": "correct",
+      "timestamp": "2026-09-06T00:16:38.403Z"
     }
   ],
-  "updatedAt": "2026-09-06T00:08:40.343Z"
+  "updatedAt": "2026-09-06T00:16:38.651Z"
 }
