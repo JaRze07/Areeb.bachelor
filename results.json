@@ -329,7 +329,17 @@
       "penaltyDescription": "3f",
       "result": "correct",
       "timestamp": "2026-09-05T23:08:29.368Z"
+    },
+    {
+      "round": 34,
+      "questionId": 7,
+      "question": "Theatre or opera?",
+      "brideAnswer": "Theatre",
+      "penaltyType": "dare",
+      "penaltyDescription": "A kiss from a girl (cheek only, even bartender)",
+      "result": "correct",
+      "timestamp": "2026-09-06T00:08:39.772Z"
     }
   ],
-  "updatedAt": "2026-09-05T23:08:29.681Z"
+  "updatedAt": "2026-09-06T00:08:40.343Z"
 }
