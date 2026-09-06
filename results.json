@@ -389,7 +389,17 @@
       "penaltyDescription": "Do what the just kiss me shirt guy says",
       "result": "wrong",
       "timestamp": "2026-09-06T01:51:38.958Z"
+    },
+    {
+      "round": 40,
+      "questionId": 40,
+      "question": "A TRAP!!! \nIF YOU PICKED A DRINK - \nYOU HAVE TO DRINK 2X \n\nIF YOU PICKED A DARE - DRINK X1 AND DO THE DARE",
+      "brideAnswer": "",
+      "penaltyType": "dare",
+      "penaltyDescription": "Get the hat",
+      "result": "correct",
+      "timestamp": "2026-09-06T09:34:47.880Z"
     }
   ],
-  "updatedAt": "2026-09-06T01:51:39.733Z"
+  "updatedAt": "2026-09-06T09:34:49.137Z"
 }
