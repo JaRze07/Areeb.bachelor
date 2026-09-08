@@ -386,7 +386,7 @@
       "question": "Save for tomorrow or spend for today?",
       "brideAnswer": "Save",
       "penaltyType": "dare",
-      "penaltyDescription": "Do what the just kiss me shirt guy say",
+      "penaltyDescription": "",
       "result": "wrong",
       "timestamp": "2026-09-06T01:51:38.958Z"
     },
@@ -401,5 +401,5 @@
       "timestamp": "2026-09-06T09:34:47.880Z"
     }
   ],
-  "updatedAt": "2026-09-08T14:47:31.829Z"
+  "updatedAt": "2026-09-08T14:47:33.289Z"
 }
