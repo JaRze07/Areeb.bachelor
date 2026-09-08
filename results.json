@@ -336,7 +336,7 @@
       "question": "Theatre or opera?",
       "brideAnswer": "Theatre",
       "penaltyType": "dare",
-      "penaltyDescription": "A kiss from a girl (cheek only, even bartender",
+      "penaltyDescription": "A kiss from a girl ",
       "result": "correct",
       "timestamp": "2026-09-06T00:08:39.772Z"
     },
@@ -401,5 +401,5 @@
       "timestamp": "2026-09-06T09:34:47.880Z"
     }
   ],
-  "updatedAt": "2026-09-08T14:47:20.086Z"
+  "updatedAt": "2026-09-08T14:47:21.166Z"
 }
