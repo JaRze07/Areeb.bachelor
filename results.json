@@ -356,7 +356,7 @@
       "question": "Liverpool or Man Utd?",
       "brideAnswer": "Liverpool",
       "penaltyType": "dare",
-      "penaltyDescription": "Same as last time. Kiss on a ",
+      "penaltyDescription": "Same as last time. Kiss ",
       "result": "correct",
       "timestamp": "2026-09-06T01:03:26.213Z"
     },
@@ -401,5 +401,5 @@
       "timestamp": "2026-09-06T09:34:47.880Z"
     }
   ],
-  "updatedAt": "2026-09-08T14:47:55.068Z"
+  "updatedAt": "2026-09-08T14:47:55.260Z"
 }
