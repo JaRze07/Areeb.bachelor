@@ -366,7 +366,7 @@
       "question": "Bus or taxi?",
       "brideAnswer": "Taxi",
       "penaltyType": "dare",
-      "penaltyDescription": "Kiss on a cheek ofrom any girl",
+      "penaltyDescription": "Kiss on a cheek omfrom any girl",
       "result": "wrong",
       "timestamp": "2026-09-06T01:04:36.112Z"
     },
@@ -401,5 +401,5 @@
       "timestamp": "2026-09-06T09:34:47.880Z"
     }
   ],
-  "updatedAt": "2026-09-08T14:46:59.785Z"
+  "updatedAt": "2026-09-08T14:47:00.908Z"
 }
