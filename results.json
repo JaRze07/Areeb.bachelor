@@ -336,7 +336,7 @@
       "question": "Theatre or opera?",
       "brideAnswer": "Theatre",
       "penaltyType": "dare",
-      "penaltyDescription": "A kiss ",
+      "penaltyDescription": "A kiss",
       "result": "correct",
       "timestamp": "2026-09-06T00:08:39.772Z"
     },
@@ -401,5 +401,5 @@
       "timestamp": "2026-09-06T09:34:47.880Z"
     }
   ],
-  "updatedAt": "2026-09-08T14:47:36.754Z"
+  "updatedAt": "2026-09-08T14:47:43.500Z"
 }
